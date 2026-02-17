@@ -3,13 +3,14 @@
 import subprocess
 import sys
 
+
 def test_cli():
     """Test basic CLI functionality."""
     try:
         result = subprocess.run(
             [sys.executable, "-m", "catscraps.cli", "--help"],
             capture_output=True,
-            text=True
+            text=True,
         )
         if result.returncode == 0:
             print("✓ CLI tool works")
@@ -22,6 +23,7 @@ def test_cli():
     except Exception as e:
         print(f"✗ Error: {e}")
         return False
+
 
 if __name__ == "__main__":
     success = test_cli()
