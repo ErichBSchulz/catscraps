@@ -25,6 +25,9 @@ def plot(
     show_cost: bool = typer.Option(
         True, "--show-cost/--no-show-cost", help="Display cost labels on bars"
     ),
+    plot_type: str = typer.Option(
+        "A", "--type", "-t", help="Plot type: A (standard) or B (pass-rate vs cost)"
+    ),
     output: str = typer.Option(
         "benchmark_graph.png", "--output", "-f", help="Output file name"
     ),
@@ -69,6 +72,7 @@ def plot(
                 benchmark_data_list=benchmark_data_list,
                 show_cost=show_cost,
                 output_file=output,
+                plot_type=plot_type,
             )
             console.print(f"[green]✓ Graph saved to {output}[/green]")
         except Exception as e:
