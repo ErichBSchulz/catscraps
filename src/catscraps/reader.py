@@ -21,25 +21,30 @@ def _read_dwash20260217_file(filepath: str, run_name: str) -> BenchmarkData:
     pass_rate_2: 0.456
     total_cost: 0.789
     """
-    pattern = re.compile(
-        r"===\s+.*?openrouter-(.*?)\s+===\s*\n\s*pass_rate_1:\s+([\d.]+)\s*\n\s*pass_rate_2:\s+([\d.]+)\s*\n\s*total_cost:\s+([\d.]+)",
-        re.MULTILINE,
-    )
-
     with open(filepath, "r") as f:
         content = f.read()
 
-    matches = pattern.findall(content)
+    # Split by model headers, capturing the model name
+    parts = re.split(r"===\s+.*?openrouter-(.*?)\s+===", content)
     results = []
 
-    for m in matches:
-        name = m[0].replace("primary-variation-", "")
-        result = ModelResult(
-            name=name,
-            pass_rate_1=float(m[1]),
-            pass_rate_2=float(m[2]),
-            total_cost=float(m[3]),
-        )
-        results.append(result)
+    # parts[0] is preamble, then name, body, name, body...
+    for i in range(1, len(parts), 2):
+        name = parts[i].replace("primary-variation-", "").strip()
+        body = parts[i + 1]
+
+        # Extract all pass rates in order
+        pass_rates = [
+            float(m) for m in re.findall(r"pass_rate_\d+:\s+([\d.]+)", body)
+        ]
+
+        # Extract total cost
+        cost_match = re.search(r"total_cost:\s+([\d.]+)", body)
+        cost = float(cost_match.group(1)) if cost_match else 0.0
+
+        if pass_rates:
+            results.append(
+                ModelResult(name=name, pass_rates=pass_rates, total_cost=cost)
+            )
 
     return BenchmarkData(run_name=run_name, results=results)

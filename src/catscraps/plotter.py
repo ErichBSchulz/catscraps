@@ -34,8 +34,12 @@ def _get_data(
         for name in model_names:
             try:
                 res = bd.get_model_result(name)
-                p1.append(res.pass_rate_1)
-                p2.append(res.pass_rate_2)
+                if res.pass_rates:
+                    p1.append(res.pass_rates[0])
+                    p2.append(res.pass_rates[-1])
+                else:
+                    p1.append(0.0)
+                    p2.append(0.0)
                 costs.append(res.total_cost)
             except KeyError:
                 p1.append(0.0)

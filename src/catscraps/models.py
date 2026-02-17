@@ -7,8 +7,7 @@ class ModelResult:
     """Data for a single model from a single run."""
 
     name: str
-    pass_rate_1: float
-    pass_rate_2: float
+    pass_rates: List[float]
     total_cost: float
 
 
