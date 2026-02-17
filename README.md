@@ -36,23 +36,10 @@ plot-benchmark run1.txt run2.txt --auto-open --no-show-cost --output myplot.png
 plot-benchmark --help
 ```
 
-### Python API
-
-```python
-from catscraps.reader import read_file
-from catscraps.plotter import create_plot
-
-# Read benchmark files
-run1 = read_file("run1.txt", "Run 1")
-run2 = read_file("run2.txt", "Run 2")
-
-# Create plot
-create_plot([run1, run2], show_cost=True, output_file="output.png")
-```
 
 ## File Format
 
-Benchmark files should follow the dwash20260217 format:
+The current benchmark dwash20260217 format is deprecated:
 
 ```
 === openrouter-model-name ===
