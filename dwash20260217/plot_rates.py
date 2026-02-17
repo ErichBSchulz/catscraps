@@ -84,6 +84,7 @@ bars2 = ax.barh(
     edgecolor="black",
 )
 
+
 # Add cost labels to each bar
 def add_cost_labels(bars, costs, y_offset):
     for bar, cost in zip(bars, costs):
@@ -92,8 +93,16 @@ def add_cost_labels(bars, costs, y_offset):
         y = bar.get_y() + bar.get_height() / 2
         # Format cost to 4 decimal places
         label = f"${cost:.4f}"
-        ax.text(x + 0.5, y + y_offset, label, va='center', fontsize=8,
-                color='black', fontweight='bold')
+        ax.text(
+            x + 0.5,
+            y + y_offset,
+            label,
+            va="center",
+            fontsize=8,
+            color="black",
+            fontweight="bold",
+        )
+
 
 # Add labels for run1 bars (slightly above bar center)
 add_cost_labels(bars1, run1_cost, -0.02)
