@@ -124,21 +124,33 @@ def _create_plot_b(
     benchmark_data_list, model_names, all_p1, all_p2, all_costs, output_file
 ):
     fig, ax = plt.subplots(figsize=(10, 7))
+
+    # Add Best/Worst markers
+    ax.text(0.05, 0.95, "Worst", transform=ax.transAxes, fontsize=40,
+            color='gray', alpha=0.1, ha='left', va='top', fontweight='bold')
+    ax.text(0.95, 0.05, "Best", transform=ax.transAxes, fontsize=40,
+            color='gray', alpha=0.1, ha='right', va='bottom', fontweight='bold')
+
     for i, bd in enumerate(benchmark_data_list):
         color = COLORS[i % len(COLORS)]
         for j, name in enumerate(model_names):
             p1, p2, cost = all_p1[i][j], all_p2[i][j], all_costs[i][j]
             if cost <= 0:
                 continue
-            ax.hlines(cost, p1, p2, colors=color, linewidth=3, alpha=0.6)
+
+            display_name = name
+            if len(name) > 10 and "-" in name:
+                display_name = "-".join(name.split("-")[1:])
+
+            ax.hlines(cost, p1, p2, colors=color, linewidth=6, alpha=0.6)
             ax.plot([p1, p2], [cost, cost], "|", color=color, markersize=8)
             ax.text(
                 (p1 + p2) / 2,
                 cost,
-                f" {name}",
+                f" {display_name}",
                 va="bottom",
                 ha="center",
-                fontsize=7,
+                fontsize=14,
                 alpha=0.7,
             )
 
