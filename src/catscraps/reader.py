@@ -23,7 +23,7 @@ def _read_dwash20260217_file(filepath: str, run_name: str) -> BenchmarkData:
     """
     pattern = re.compile(
         r"===\s+.*?openrouter-(.*?)\s+===\s*\n\s*pass_rate_1:\s+([\d.]+)\s*\n\s*pass_rate_2:\s+([\d.]+)\s*\n\s*total_cost:\s+([\d.]+)",
-        re.MULTILINE
+        re.MULTILINE,
     )
 
     with open(filepath, "r") as f:
