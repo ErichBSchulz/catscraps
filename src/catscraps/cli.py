@@ -68,7 +68,7 @@ def plot(
         task = progress.add_task("Reading benchmark files...", total=len(all_files))
 
         for filepath in all_files:
-            run_name = filepath.stem
+            run_name = filepath.stem.replace("_", " ")
             if not filepath.exists():
                 console.print(f"[red]Error: File '{filepath}' not found[/red]")
                 raise typer.Exit(1)
