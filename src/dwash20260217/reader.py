@@ -3,7 +3,15 @@ from typing import List
 from .models import BenchmarkData, ModelResult
 
 
-def read_dwash20260217_file(filepath: str, run_name: str) -> BenchmarkData:
+def read_file(filepath: str, run_name: str, format: str) -> BenchmarkData:
+    """Read a benchmark file in the specified format."""
+    if format == "dwash20260217":
+        return _read_dwash20260217_file(filepath, run_name)
+    else:
+        raise ValueError(f"Unknown format: {format}")
+
+
+def _read_dwash20260217_file(filepath: str, run_name: str) -> BenchmarkData:
     """
     Read a dwash20260217 format file.
 
