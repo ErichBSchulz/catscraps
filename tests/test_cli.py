@@ -1,4 +1,5 @@
 """Test the CLI tool."""
+
 import pytest
 import subprocess
 import sys
@@ -109,11 +110,13 @@ def test_reader_module():
     from dwash20260217.models import BenchmarkData, ModelResult
 
     with tempfile.NamedTemporaryFile(mode="w", suffix=".txt", delete=False) as f:
-        f.write("""=== openrouter-test-model ===
+        f.write(
+            """=== openrouter-test-model ===
 pass_rate_1: 0.75
 pass_rate_2: 0.95
 total_cost: 1.2345
-""")
+"""
+        )
         f.flush()
         f.close()
 
