@@ -126,10 +126,30 @@ def _create_plot_b(
     fig, ax = plt.subplots(figsize=(10, 7))
 
     # Add Best/Worst markers
-    ax.text(0.05, 0.95, "Worst", transform=ax.transAxes, fontsize=40,
-            color='gray', alpha=0.1, ha='left', va='top', fontweight='bold')
-    ax.text(0.95, 0.05, "Best", transform=ax.transAxes, fontsize=40,
-            color='gray', alpha=0.1, ha='right', va='bottom', fontweight='bold')
+    ax.text(
+        0.05,
+        0.95,
+        "Worst",
+        transform=ax.transAxes,
+        fontsize=40,
+        color="gray",
+        alpha=0.1,
+        ha="left",
+        va="top",
+        fontweight="bold",
+    )
+    ax.text(
+        0.95,
+        0.05,
+        "Best",
+        transform=ax.transAxes,
+        fontsize=40,
+        color="gray",
+        alpha=0.1,
+        ha="right",
+        va="bottom",
+        fontweight="bold",
+    )
 
     for i, bd in enumerate(benchmark_data_list):
         color = COLORS[i % len(COLORS)]
