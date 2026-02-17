@@ -39,12 +39,12 @@ plot-benchmark --help
 ### Python API
 
 ```python
-from dwash20260217.reader import read_dwash20260217_file
-from dwash20260217.plotter import create_plot
+from catscraps.reader import read_file
+from catscraps.plotter import create_plot
 
 # Read benchmark files
-run1 = read_dwash20260217_file("run1.txt", "Run 1")
-run2 = read_dwash20260217_file("run2.txt", "Run 2")
+run1 = read_file("run1.txt", "Run 1")
+run2 = read_file("run2.txt", "Run 2")
 
 # Create plot
 create_plot([run1, run2], show_cost=True, output_file="output.png")
