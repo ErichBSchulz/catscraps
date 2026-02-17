@@ -1,0 +1,32 @@
+openrouter-deepseek-deepseek-v3.2 ===
+  pass_rate_1: 35.7
+  pass_rate_2: 64.3
+  total_cost: 0.1224
+=== 2026-02-10-00-57-59--primary-variation-openrouter-moonshotai-kimi-k2.5 ===
+  pass_rate_1: 50.0
+  pass_rate_2: 64.3
+  total_cost: 0.3490
+=== 2026-02-10-03-32-32--primary-variation-openrouter-openai-gpt-oss-120b ===
+  pass_rate_1: 14.3
+  pass_rate_2: 50.0
+  total_cost: 0.2395
+=== 2026-02-11-04-00-23--primary-variation-openrouter-openai-gpt-5.2 ===
+  pass_rate_1: 57.1
+  pass_rate_2: 85.7
+  total_cost: 0.8883
+=== 2026-02-10-03-53-16--primary-variation-openrouter-google-gemini-3-flash-preview ===
+  pass_rate_1: 57.1
+  pass_rate_2: 78.6
+  total_cost: 0.1457
+=== 2026-02-11-03-28-14--primary-variation-openrouter-google-gemini-3-pro-preview ===
+  pass_rate_1: 78.6
+  pass_rate_2: 100.0
+  total_cost: 2.2613
+=== 2026-02-10-04-51-47--primary-variation-openrouter-anthropic-claude-haiku-4.5 ===
+  pass_rate_1: 21.4
+  pass_rate_2: 42.9
+  total_cost: 0.9528
+=== 2026-02-11-03-18-33--primary-variation-openrouter-anthropic-claude-sonnet-4.5 ===
+  pass_rate_1: 28.6
+  pass_rate_2: 57.1
+  total_cost: 2.3261 (edited)Tuesday, 17 February 2026 at 00:27
