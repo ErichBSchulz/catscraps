@@ -44,49 +44,36 @@ for name in model_names:
         run2_pass2.append(0.0)
 
 # Plotting
-fig, ax = plt.subplots(figsize=(16, len(model_names) * 0.8))
+fig, ax = plt.subplots(figsize=(14, len(model_names) * 0.8))
 
 # Y positions for each model
 y_pos = np.arange(len(model_names))
-# We'll have 4 bars per model, so we need to adjust positions
-bar_width = 0.18
-# Positions for each of the 4 bars
-y_run1_pass1 = y_pos - 1.5 * bar_width
-y_run1_pass2 = y_pos - 0.5 * bar_width
-y_run2_pass1 = y_pos + 0.5 * bar_width
-y_run2_pass2 = y_pos + 1.5 * bar_width
+# We'll have 2 bars per model (run1 and run2), each showing pass1 to pass2 range
+bar_width = 0.35
+# Positions for run1 and run2 bars
+y_run1 = y_pos - bar_width/2
+y_run2 = y_pos + bar_width/2
 
-# Plot each bar separately
+# For each bar, we want to show pass1 as the start and pass2 as the end
+# We'll use barh with left=pass1 and width=(pass2 - pass1)
+# Run1 bars
 ax.barh(
-    y_run1_pass1,
-    run1_pass1,
+    y_run1,
+    [run1_pass2[i] - run1_pass1[i] for i in range(len(model_names))],
     bar_width,
-    label="Run 1 Pass 1",
+    left=run1_pass1,
+    label="Run 1 (Pass 1 → Pass 2)",
     color="#a0cbe8",
     edgecolor="black",
 )
+# Run2 bars
 ax.barh(
-    y_run1_pass2,
-    run1_pass2,
+    y_run2,
+    [run2_pass2[i] - run2_pass1[i] for i in range(len(model_names))],
     bar_width,
-    label="Run 1 Pass 2",
-    color="#4e79a7",
-    edgecolor="black",
-)
-ax.barh(
-    y_run2_pass1,
-    run2_pass1,
-    bar_width,
-    label="Run 2 Pass 1",
+    left=run2_pass1,
+    label="Run 2 (Pass 1 → Pass 2)",
     color="#ffb366",
-    edgecolor="black",
-)
-ax.barh(
-    y_run2_pass2,
-    run2_pass2,
-    bar_width,
-    label="Run 2 Pass 2",
-    color="#ff8000",
     edgecolor="black",
 )
 
@@ -94,7 +81,7 @@ ax.barh(
 ax.set_yticks(y_pos)
 ax.set_yticklabels(model_names)
 ax.set_xlabel("Pass Rate (%)")
-ax.set_title("Model Pass Rates: Separate Bars for Run 1 & Run 2, Pass 1 and Pass 2")
+ax.set_title("Model Pass Rates: Range Bars (Pass 1 start, Pass 2 end)")
 ax.legend()
 ax.grid(axis="x", linestyle="--", alpha=0.7)
 
