@@ -51,8 +51,8 @@ y_pos = np.arange(len(model_names))
 # We'll have 2 bars per model (run1 and run2), each showing pass1 to pass2 range
 bar_width = 0.35
 # Positions for run1 and run2 bars
-y_run1 = y_pos - bar_width/2
-y_run2 = y_pos + bar_width/2
+y_run1 = y_pos - bar_width / 2
+y_run2 = y_pos + bar_width / 2
 
 # For each bar, we want to show pass1 as the start and pass2 as the end
 # We'll use barh with left=pass1 and width=(pass2 - pass1)
