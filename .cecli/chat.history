@@ -1860,3 +1860,106 @@ rmdir src/dwash20260217
 > Added 5 lines of output to the chat.  
 > You can use /undo to undo and discard each cecli commit.  
 > Finished.  
+
+#### /clear  
+> Processing...  
+> All chat history cleared.  
+> ✅ Cleared chat history  
+> Finished.  
+
+#### I want to add a second output format where X is passrate and Y is cost.  
+####   
+#### Each model should be represented as vertical bar from pass1 to pass2. The different files should be different collors.  
+####   
+#### The original plot is "Plot A", the new one is "Plot B"  
+####  
+> Processing...  
+> Dropping src/dwash20260217/__init__.py from the chat (file was deleted).  
+> Dropping src/dwash20260217/plot_rates.py from the chat (file was deleted).  
+> Dropping src/dwash20260217/plotter.py from the chat (file was deleted).  
+> Dropping src/dwash20260217/models.py from the chat (file was deleted).  
+> Dropping src/dwash20260217/reader.py from the chat (file was deleted).  
+
+I need to implement the new "Plot B" logic (Pass Rate vs Cost). This will require changes to `src/catscraps/plotter.py` to add the new plotting function, and `src/catscraps/cli.py` to expose the option to the user.
+
+However, `src/catscraps/plotter.py` is not currently in the chat. Please add it so I can modify it.
+
+In the meantime, I can update the CLI to accept a plot type argument.
+
+```python
+src/catscraps/cli.py
+<<<<<<< SEARCH
+    show_cost: bool = typer.Option(
+        True, "--show-cost/--no-show-cost", help="Display cost labels on bars"
+    ),
+    output: str = typer.Option(
+        "benchmark_graph.png", "--output", "-f", help="Output file name"
+    ),
+):
+    """
+    Create a visualization of benchmark results.
+=======
+    show_cost: bool = typer.Option(
+        True, "--show-cost/--no-show-cost", help="Display cost labels on bars"
+    ),
+    plot_type: str = typer.Option(
+        "A", "--type", "-t", help="Plot type: A (standard) or B (pass-rate vs cost)"
+    ),
+    output: str = typer.Option(
+        "benchmark_graph.png", "--output", "-f", help="Output file name"
+    ),
+):
+    """
+    Create a visualization of benchmark results.
+>>>>>>> REPLACE
+```
+
+```python
+src/catscraps/cli.py
+<<<<<<< SEARCH
+    # Create the plot
+    with console.status("[bold green]Creating plot...") as status:
+        try:
+            create_plot(
+                benchmark_data_list=benchmark_data_list,
+                show_cost=show_cost,
+                output_file=output,
+            )
+            console.print(f"[green]✓ Graph saved to {output}[/green]")
+        except Exception as e:
+            console.print(f"[red]Error creating plot: {e}[/red]")
+            raise typer.Exit(1)
+=======
+    # Create the plot
+    with console.status("[bold green]Creating plot...") as status:
+        try:
+            create_plot(
+                benchmark_data_list=benchmark_data_list,
+                show_cost=show_cost,
+                output_file=output,
+                plot_type=plot_type,
+            )
+            console.print(f"[green]✓ Graph saved to {output}[/green]")
+        except Exception as e:
+            console.print(f"[red]Error creating plot: {e}[/red]")
+            raise typer.Exit(1)
+>>>>>>> REPLACE
+```
+
+> Tokens: 4.5k sent, 892 received. Cost: $0.02 message, $0.06 session.  
+> Applied edit to src/catscraps/cli.py  
+> Commit 37c5563 feat: Add plot type option to CLI  
+> /home/erich/catscraps/src/dwash20260217/plotter.py: file not found error  
+> Dropping src/dwash20260217/plotter.py from the chat (file was deleted).  
+
+I need to edit `src/catscraps/plotter.py` to add the new plot type, but I don't see that file in the chat yet. You mentioned adding `src/dwash20260217/plotter.py`, but the code in `cli.py` is importing from `catscraps.plotter`.
+
+I suspect you might have moved the file or I should be editing `src/catscraps/plotter.py`.
+
+Could you please add **`src/catscraps/plotter.py`** to the chat?
+
+If `src/dwash20260217/plotter.py` is the file I should use as a base to create `src/catscraps/plotter.py`, please let me know and provide its content.
+
+Once I have the plotter code, I will implement the "Plot B" logic.
+
+> Tokens: 5.5k sent, 455 received. Cost: $0.02 message, $0.08 session.  
