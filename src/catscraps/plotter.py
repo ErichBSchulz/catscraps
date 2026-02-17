@@ -274,7 +274,7 @@ def add_cost_labels(ax, bars, costs, y_positions):
         y_pos = bar.get_y() + bar.get_height() / 2
         label = f"${cost:.4f}"
         ax.text(
-            x + 0.5,
+            x + 0.02,
             y_pos,
             label,
             va="center",
