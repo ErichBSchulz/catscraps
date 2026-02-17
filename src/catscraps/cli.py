@@ -15,7 +15,10 @@ console = Console()
 
 @app.command()
 def plot(
-    files: list[str] = typer.Argument(..., help="List of benchmark files to plot"),
+    files: list[Path] = typer.Argument(None, help="List of benchmark files to plot"),
+    file_list: Path = typer.Option(
+        None, "--file-list", "-l", help="File containing list of benchmark files"
+    ),
     input_format: str = typer.Option(
         "dwash20260217", "--input-format", "-i", help="Input file format"
     ),
@@ -37,7 +40,20 @@ def plot(
 
     The first file determines the model order.
     """
-    if not files:
+    all_files = list(files) if files else []
+    if file_list:
+        if not file_list.exists():
+            console.print(f"[red]Error: File list '{file_list}' not found[/red]")
+            raise typer.Exit(1)
+        all_files.extend(
+            [
+                Path(line.strip())
+                for line in file_list.read_text().splitlines()
+                if line.strip()
+            ]
+        )
+
+    if not all_files:
         console.print("[red]Error: At least one file must be provided[/red]")
         raise typer.Exit(1)
 
@@ -49,16 +65,16 @@ def plot(
         TextColumn("[progress.description]{task.description}"),
         console=console,
     ) as progress:
-        task = progress.add_task("Reading benchmark files...", total=len(files))
+        task = progress.add_task("Reading benchmark files...", total=len(all_files))
 
-        for i, filepath in enumerate(files):
-            run_name = f"Run {i+1}"
-            if not Path(filepath).exists():
+        for filepath in all_files:
+            run_name = filepath.stem
+            if not filepath.exists():
                 console.print(f"[red]Error: File '{filepath}' not found[/red]")
                 raise typer.Exit(1)
 
             try:
-                benchmark_data = read_file(filepath, run_name, format=input_format)
+                benchmark_data = read_file(str(filepath), run_name, format=input_format)
                 benchmark_data_list.append(benchmark_data)
                 progress.update(task, advance=1, description=f"Read {filepath}")
             except Exception as e:

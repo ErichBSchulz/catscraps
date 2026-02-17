@@ -13,7 +13,7 @@ class ModelResult:
 
 @dataclass
 class BenchmarkData:
-    """Collection of model results from multiple runs."""
+    """Collection of model results from a single run."""
 
     run_name: str
     results: List[ModelResult]
