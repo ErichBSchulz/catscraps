@@ -106,8 +106,8 @@ def test_plot_command_missing_file():
 
 def test_reader_module():
     """Test the reader module directly."""
-    from dwash20260217.reader import read_dwash20260217_file
-    from dwash20260217.models import BenchmarkData, ModelResult
+    from src.dwash20260217.reader import read_dwash20260217_file
+    from src.dwash20260217.models import BenchmarkData, ModelResult
 
     with tempfile.NamedTemporaryFile(mode="w", suffix=".txt", delete=False) as f:
         f.write(
@@ -137,7 +137,7 @@ total_cost: 1.2345
 
 def test_models():
     """Test model classes."""
-    from dwash20260217.models import ModelResult, BenchmarkData
+    from src.dwash20260217.models import ModelResult, BenchmarkData
 
     mr = ModelResult(name="test", pass_rate_1=0.1, pass_rate_2=0.2, total_cost=0.3)
     assert mr.name == "test"

@@ -6,6 +6,7 @@ This file is kept for backward compatibility.
 
 import sys
 import subprocess
+import os
 
 
 def main():
