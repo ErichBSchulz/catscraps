@@ -68,5 +68,5 @@ total_cost: 0.789
 uv pip install -e ".[dev]"
 
 # Run tests
-pytest tests/
+uv run pytest
 ```
