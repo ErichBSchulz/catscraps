@@ -34,9 +34,7 @@ def _read_dwash20260217_file(filepath: str, run_name: str) -> BenchmarkData:
         body = parts[i + 1]
 
         # Extract all pass rates in order
-        pass_rates = [
-            float(m) for m in re.findall(r"pass_rate_\d+:\s+([\d.]+)", body)
-        ]
+        pass_rates = [float(m) for m in re.findall(r"pass_rate_\d+:\s+([\d.]+)", body)]
 
         # Extract total cost
         cost_match = re.search(r"total_cost:\s+([\d.]+)", body)
