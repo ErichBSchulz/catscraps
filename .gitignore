@@ -12,3 +12,4 @@ wheels/
 *.png
 .cecli*
 .cecli*
+.aider*
