@@ -67,7 +67,8 @@ def table(
 
     logger.info("Processing %d file(s)", len(files))
     for f in files:
-        logger.debug("Queueing file: %s (format: classic)", f)
+        fmt = "classic" if f.suffix in [".yml", ".yaml"] else "dwash20260217"
+        logger.debug("Queueing file: %s (format: %s)", f, fmt)
 
     table = Table(title="Benchmark Results")
 
@@ -87,6 +88,10 @@ def table(
 
         try:
             # Currently assuming classic format for table view as it has the rich metadata
+            if filepath.suffix not in [".yml", ".yaml"]:
+                logger.warning("Skipping %s: table view only supports classic YAML files", filepath)
+                continue
+
             runs = read_classic_file(str(filepath))
             for run in runs:
                 m = run.metadata
