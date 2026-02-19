@@ -1,8 +1,62 @@
 import re
 import yaml
-from typing import List, Dict, Any
+import pandas as pd
+from typing import List, Dict, Any, Union
 from pathlib import Path
 from .models import BenchmarkData, ModelResult, BenchmarkRun, RunMetadata, RunOutcomes
+
+
+def load_benchmarks(files: List[Path]) -> pd.DataFrame:
+    """
+    Load benchmark data from multiple files into a unified DataFrame.
+    """
+    all_data = []
+
+    for filepath in files:
+        if filepath.suffix in [".yml", ".yaml"]:
+            runs = _read_classic_file(str(filepath))
+            for run in runs:
+                row = {
+                    "File": filepath.name,
+                    "Model": run.metadata.short_name,
+                    "Pass 1": f"{run.outcomes.pass_rate_1:.1f}%",
+                    "Pass 2": f"{run.outcomes.pass_rate_2:.1f}%",
+                    "Cost/Case": f"${run.outcomes.mean_cost:.4f}",
+                    "Tok/Case": f"{int(run.outcomes.mean_prompt_tokens + run.outcomes.mean_completion_tokens)}",
+                    "Sec/Case": f"{run.outcomes.seconds_per_case:.1f}",
+                    # Raw values for plotting later if needed
+                    "_pass_rate_1": run.outcomes.pass_rate_1,
+                    "_pass_rate_2": run.outcomes.pass_rate_2,
+                    "_total_cost": run.outcomes.total_cost,
+                    "_model_name": run.metadata.short_name,
+                    "_run_name": filepath.stem,
+                }
+                all_data.append(row)
+        else:
+            # dwash format
+            run_name = filepath.stem.replace("_", " ")
+            bd = _read_dwash20260217_file(str(filepath), run_name)
+            for res in bd.results:
+                p1 = res.pass_rates[0] if len(res.pass_rates) > 0 else 0.0
+                p2 = res.pass_rates[1] if len(res.pass_rates) > 1 else p1
+                row = {
+                    "File": filepath.name,
+                    "Model": res.name,
+                    "Pass 1": f"{p1:.1f}%",
+                    "Pass 2": f"{p2:.1f}%",
+                    "Cost/Case": f"${res.total_cost:.4f}",  # Note: dwash format total_cost is actually per case in example? Assuming raw matches.
+                    "Tok/Case": "N/A",
+                    "Sec/Case": "N/A",
+                    # Raw values
+                    "_pass_rate_1": p1,
+                    "_pass_rate_2": p2,
+                    "_total_cost": res.total_cost,
+                    "_model_name": res.name,
+                    "_run_name": run_name,
+                }
+                all_data.append(row)
+
+    return pd.DataFrame(all_data)
 
 
 def read_file(filepath: str, run_name: str, format: str) -> BenchmarkData:
@@ -13,7 +67,7 @@ def read_file(filepath: str, run_name: str, format: str) -> BenchmarkData:
         # For legacy compatibility, we read the classic file but convert
         # the first entry to BenchmarkData for the plotter.
         # This is a stop-gap until the plotter uses the new models.
-        runs = read_classic_file(filepath)
+        runs = _read_classic_file(filepath)
         if not runs:
             raise ValueError("No data found in file")
 
@@ -34,7 +88,7 @@ def read_file(filepath: str, run_name: str, format: str) -> BenchmarkData:
         raise ValueError(f"Unknown format: {format}")
 
 
-def read_classic_file(filepath: str) -> List[BenchmarkRun]:
+def _read_classic_file(filepath: str) -> List[BenchmarkRun]:
     """Read a classic (YAML list) format file."""
     with open(filepath, "r") as f:
         data = yaml.safe_load(f)

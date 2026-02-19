@@ -9,7 +9,7 @@ import os
 from pathlib import Path
 
 from rich.table import Table
-from catscraps.reader import read_file, read_classic_file
+from catscraps.reader import read_file, load_benchmarks
 from catscraps.plotter import create_plot
 
 # Configure logger
@@ -65,71 +65,41 @@ def table(
         console.print("[red]Error: At least one file must be provided[/red]")
         raise typer.Exit(1)
 
-    logger.info("Processing %d file(s)", len(files))
+    # Check files exist
+    valid_files = []
     for f in files:
-        fmt = "classic" if f.suffix in [".yml", ".yaml"] else "dwash20260217"
-        logger.debug("Queueing file: %s (format: %s)", f, fmt)
+        if not f.exists():
+            console.print(f"[red]Error: File '{f}' not found[/red]")
+            # We continue checking other files to report all missing ones if needed,
+            # but per strict fail-fast rules, maybe we should just crash?
+            # The prompt says "Fail very loudly... unless explicitly told to catch them".
+            # For CLI arguments, it's usually better to list missing files then exit.
+            # But let's fail immediately on the first missing file to be strict.
+            raise typer.Exit(1)
+        valid_files.append(f)
+
+    try:
+        df = load_benchmarks(valid_files)
+    except Exception as e:
+        console.print(f"[red]Error loading benchmarks: {e}[/red]")
+        raise typer.Exit(1)
+
+    if df.empty:
+        console.print("[yellow]No data found.[/yellow]")
+        return
 
     table = Table(title="Benchmark Results")
 
-    # Add columns
-    table.add_column("File", style="dim")
-    table.add_column("Model", style="cyan")
-    table.add_column("Pass 1", justify="right")
-    table.add_column("Pass 2", justify="right")
-    table.add_column("Cost/Case", justify="right")
-    table.add_column("Tok/Case", justify="right")
-    table.add_column("Sec/Case", justify="right")
+    # Define columns to display (exclude internal columns starting with _)
+    display_cols = [c for c in df.columns if not c.startswith("_")]
 
-    for filepath in files:
-        if not filepath.exists():
-            console.print(f"[red]Error: File '{filepath}' not found[/red]")
-            continue
+    for col in display_cols:
+        justify = "right" if col not in ["File", "Model"] else "left"
+        style = "dim" if col == "File" else ("cyan" if col == "Model" else None)
+        table.add_column(col, justify=justify, style=style)
 
-        try:
-            if filepath.suffix in [".yml", ".yaml"]:
-                runs = read_classic_file(str(filepath))
-                for run in runs:
-                    m = run.metadata
-                    o = run.outcomes
-
-                    table.add_row(
-                        filepath.name,
-                        m.short_name,
-                        f"{o.pass_rate_1:.1f}%",
-                        f"{o.pass_rate_2:.1f}%",
-                        f"${o.mean_cost:.4f}",
-                        f"{int(o.mean_prompt_tokens + o.mean_completion_tokens)}",
-                        f"{o.seconds_per_case:.1f}",
-                    )
-            else:
-                # Assume dwash20260217 format for other files (txt)
-                # This format has less metadata, so we fill with N/A
-                run_name = filepath.stem.replace("_", " ")
-                benchmark_data = read_file(
-                    str(filepath), run_name, format="dwash20260217"
-                )
-
-                for result in benchmark_data.results:
-                    p1 = result.pass_rates[0] if len(result.pass_rates) > 0 else 0.0
-                    p2 = result.pass_rates[1] if len(result.pass_rates) > 1 else p1
-
-                    table.add_row(
-                        filepath.name,
-                        result.name,
-                        f"{p1:.1f}%",
-                        f"{p2:.1f}%",
-                        f"${result.total_cost:.4f}",
-                        "N/A",  # Tok/Case
-                        "N/A",  # Sec/Case
-                    )
-
-        except Exception as e:
-            console.print(f"[red]Error reading {filepath}: {e}[/red]")
-            # Fail fast? Or continue for other files?
-            # User guideline says fail fast unless explicitly told to catch.
-            # But here we are iterating user inputs. I'll throw.
-            raise typer.Exit(1)
+    for _, row in df.iterrows():
+        table.add_row(*[str(row[c]) for c in display_cols])
 
     console.print(table)
 
