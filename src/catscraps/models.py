@@ -46,19 +46,18 @@ class RunOutcomes(BaseModel):
 
     @computed_field
     def mean_cost(self) -> float:
-        return self.total_cost / self.total_tests if self.total_tests else 0.0
+        return self.total_cost / self.total_tests
 
     @computed_field
     def mean_completion_tokens(self) -> float:
-        return self.completion_tokens / self.total_tests if self.total_tests else 0.0
+        return self.completion_tokens / self.total_tests
 
     @computed_field
     def mean_prompt_tokens(self) -> float:
-        return self.prompt_tokens / self.total_tests if self.total_tests else 0.0
+        return self.prompt_tokens / self.total_tests
 
     @computed_field
     def count_well_formed(self) -> int:
-        # Converting percentage to count as requested
         return int((self.percent_cases_well_formed / 100.0) * self.total_tests)
 
 

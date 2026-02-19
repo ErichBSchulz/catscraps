@@ -55,9 +55,26 @@ def read_classic_file(filepath: str) -> List[BenchmarkRun]:
         outcome_keys = RunOutcomes.model_fields.keys()
         outcome_data = {k: v for k, v in entry.items() if k in outcome_keys}
 
-        # Ensure total_tests is present if test_cases is there (alias)
-        if "total_tests" not in outcome_data and "test_cases" in meta_data:
-            outcome_data["total_tests"] = meta_data["test_cases"]
+        # Validation: Check for consistency between test_cases and total_tests
+        test_cases = meta_data.get("test_cases")
+        total_tests = outcome_data.get("total_tests")
+
+        if test_cases is None and total_tests is None:
+            raise ValueError("Neither 'test_cases' nor 'total_tests' found in data.")
+
+        if test_cases is not None and total_tests is not None:
+            if test_cases != total_tests:
+                raise ValueError(
+                    f"Inconsistent test counts: test_cases={test_cases}, total_tests={total_tests}"
+                )
+
+        # Ensure total_tests is populated for RunOutcomes
+        if total_tests is None:
+            outcome_data["total_tests"] = test_cases
+
+        # Ensure test_cases is populated for RunMetadata
+        if test_cases is None:
+            meta_data["test_cases"] = total_tests
 
         try:
             metadata = RunMetadata(**meta_data)
