@@ -12,7 +12,7 @@ class RunMetadata(BaseModel):
     commit_hash: str
     map_tokens: Optional[int] = None
     command: Optional[str] = None
-    date: Optional[str] = None
+    date: Optional[Any] = None
     versions: Optional[str] = None
 
 
