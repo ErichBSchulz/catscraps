@@ -90,8 +90,11 @@ def table(
 
     table = Table(title="Benchmark Results")
 
-    # Define columns to display based on first row keys
-    display_cols = [c for c in data[0].keys() if not c.startswith("_")]
+    # Define columns to display, substituting Model for _Short Model
+    raw_cols = list(data[0].keys())
+    display_cols = [c for c in raw_cols if not c.startswith("_")]
+    if "_Short Model" in raw_cols:
+        display_cols = ["File", "Model"] + [c for c in display_cols if c not in ["File", "Model"]]
 
     for col in display_cols:
         justify = "right" if col not in ["File", "Model"] else "left"
@@ -99,7 +102,21 @@ def table(
         table.add_column(col, justify=justify, style=style)
 
     for row in data:
-        table.add_row(*[str(row[c]) for c in display_cols])
+        formatted_row = []
+        for col in display_cols:
+            val = row["_Short Model"] if col == "Model" and "_Short Model" in row else row[col]
+            
+            if val is None:
+                formatted_row.append("N/A")
+            elif col.startswith("Pass"):
+                formatted_row.append(f"{val:.1f}%")
+            elif col == "Cost/Case":
+                formatted_row.append(f"${val:.4f}")
+            elif col == "Sec/Case":
+                formatted_row.append(f"{val:.1f}")
+            else:
+                formatted_row.append(str(val))
+        table.add_row(*formatted_row)
 
     console.print(table)
 

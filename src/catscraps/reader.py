@@ -17,12 +17,13 @@ def load_benchmarks(files: List[Path]) -> List[Dict[str, Any]]:
             for run in runs:
                 row = {
                     "File": filepath.name,
-                    "Model": run.metadata.short_name,
-                    "Pass 1": f"{run.outcomes.pass_rate_1:.1f}%",
-                    "Pass 2": f"{run.outcomes.pass_rate_2:.1f}%",
-                    "Cost/Case": f"${run.outcomes.mean_cost:.4f}",
-                    "Tok/Case": f"{int(run.outcomes.mean_prompt_tokens + run.outcomes.mean_completion_tokens)}",
-                    "Sec/Case": f"{run.outcomes.seconds_per_case:.1f}",
+                    "Model": run.metadata.model,
+                    "_Short Model": run.metadata.short_name,
+                    "Pass 1": run.outcomes.pass_rate_1,
+                    "Pass 2": run.outcomes.pass_rate_2,
+                    "Cost/Case": run.outcomes.mean_cost,
+                    "Tok/Case": int(run.outcomes.mean_prompt_tokens + run.outcomes.mean_completion_tokens),
+                    "Sec/Case": run.outcomes.seconds_per_case,
                 }
                 all_data.append(row)
         else:
@@ -32,14 +33,16 @@ def load_benchmarks(files: List[Path]) -> List[Dict[str, Any]]:
             for res in bd.results:
                 p1 = res.pass_rates[0] if len(res.pass_rates) > 0 else 0.0
                 p2 = res.pass_rates[1] if len(res.pass_rates) > 1 else p1
+                short_name = res.name.split("/")[-1] if "/" in res.name else res.name
                 row = {
                     "File": filepath.name,
                     "Model": res.name,
-                    "Pass 1": f"{p1:.1f}%",
-                    "Pass 2": f"{p2:.1f}%",
-                    "Cost/Case": f"${res.total_cost:.4f}",
-                    "Tok/Case": "N/A",
-                    "Sec/Case": "N/A",
+                    "_Short Model": short_name,
+                    "Pass 1": p1,
+                    "Pass 2": p2,
+                    "Cost/Case": res.total_cost,
+                    "Tok/Case": None,
+                    "Sec/Case": None,
                 }
                 all_data.append(row)
 
