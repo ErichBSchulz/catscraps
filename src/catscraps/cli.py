@@ -1,5 +1,7 @@
 import typer
+import logging
 from rich.console import Console
+from rich.logging import RichHandler
 from rich.progress import Progress, SpinnerColumn, TextColumn
 import subprocess
 import sys
@@ -10,8 +12,48 @@ from rich.table import Table
 from catscraps.reader import read_file, read_classic_file
 from catscraps.plotter import create_plot
 
+# Configure logger
+logging.basicConfig(
+    level=logging.WARNING,
+    format="%(message)s",
+    datefmt="[%X]",
+    handlers=[RichHandler(rich_tracebacks=True)],
+)
+logger = logging.getLogger("catscraps")
+
 app = typer.Typer(help="Benchmark visualization tool")
 console = Console()
+
+
+def configure_logging(verbose: int, quiet: bool):
+    """Configure logging level based on flags."""
+    if quiet:
+        logger.setLevel(logging.ERROR)
+    elif verbose == 1:
+        logger.setLevel(logging.INFO)
+    elif verbose >= 2:
+        logger.setLevel(logging.DEBUG)
+    else:
+        logger.setLevel(logging.WARNING)
+
+
+@app.callback()
+def main(
+    verbose: int = typer.Option(
+        0,
+        "--verbose",
+        "-v",
+        count=True,
+        help="Increase verbosity (use -v for INFO, -vv for DEBUG)",
+    ),
+    quiet: bool = typer.Option(
+        False, "--quiet", "-q", help="Suppress all output except errors"
+    ),
+):
+    """
+    Benchmark visualization tool.
+    """
+    configure_logging(verbose, quiet)
 
 
 @app.command()
@@ -22,6 +64,10 @@ def table(
     if not files:
         console.print("[red]Error: At least one file must be provided[/red]")
         raise typer.Exit(1)
+
+    logger.info("Processing %d file(s)", len(files))
+    for f in files:
+        logger.debug("Queueing file: %s (format: classic)", f)
 
     table = Table(title="Benchmark Results")
 
