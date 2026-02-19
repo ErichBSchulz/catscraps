@@ -89,7 +89,9 @@ def table(
         try:
             # Currently assuming classic format for table view as it has the rich metadata
             if filepath.suffix not in [".yml", ".yaml"]:
-                logger.warning("Skipping %s: table view only supports classic YAML files", filepath)
+                logger.warning(
+                    "Skipping %s: table view only supports classic YAML files", filepath
+                )
                 continue
 
             runs = read_classic_file(str(filepath))
