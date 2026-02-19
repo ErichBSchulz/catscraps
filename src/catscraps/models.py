@@ -1,9 +1,76 @@
-from dataclasses import dataclass
-from typing import List
+from typing import List, Optional, Any
+from pydantic import BaseModel, Field, computed_field
 
 
-@dataclass
-class ModelResult:
+class RunMetadata(BaseModel):
+    """Metadata describing the benchmark execution context."""
+
+    results_dir: str
+    test_cases: int
+    model: str
+    edit_format: str
+    commit_hash: str
+    map_tokens: Optional[int] = None
+    command: Optional[str] = None
+    date: Optional[str] = None
+    versions: Optional[str] = None
+
+
+class RunOutcomes(BaseModel):
+    """Outcomes and metrics from the benchmark."""
+
+    # Primary
+    pass_rate_1: float
+    pass_rate_2: float
+    seconds_per_case: float
+
+    # Totals to be converted to means or kept as totals
+    total_cost: float
+    completion_tokens: int
+    prompt_tokens: int
+
+    # Secondary / Counts
+    percent_cases_well_formed: float
+    error_outputs: int = 0
+    num_malformed_responses: int = 0
+    num_with_malformed_responses: int = 0
+    user_asks: int = 0
+    lazy_comments: int = 0
+    syntax_errors: int = 0
+    indentation_errors: int = 0
+    exhausted_context_windows: int = 0
+    test_timeouts: int = 0
+    total_tests: int
+    pass_num_1: int
+    pass_num_2: int
+
+    @computed_field
+    def mean_cost(self) -> float:
+        return self.total_cost / self.total_tests if self.total_tests else 0.0
+
+    @computed_field
+    def mean_completion_tokens(self) -> float:
+        return self.completion_tokens / self.total_tests if self.total_tests else 0.0
+
+    @computed_field
+    def mean_prompt_tokens(self) -> float:
+        return self.prompt_tokens / self.total_tests if self.total_tests else 0.0
+
+    @computed_field
+    def count_well_formed(self) -> int:
+        # Converting percentage to count as requested
+        return int((self.percent_cases_well_formed / 100.0) * self.total_tests)
+
+
+class BenchmarkRun(BaseModel):
+    """Complete record of a single benchmark run."""
+
+    metadata: RunMetadata
+    outcomes: RunOutcomes
+
+
+# Legacy models support for existing plotter
+class ModelResult(BaseModel):
     """Data for a single model from a single run."""
 
     name: str
@@ -11,8 +78,7 @@ class ModelResult:
     total_cost: float
 
 
-@dataclass
-class BenchmarkData:
+class BenchmarkData(BaseModel):
     """Collection of model results from a single run."""
 
     run_name: str

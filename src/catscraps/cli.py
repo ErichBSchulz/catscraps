@@ -6,11 +6,63 @@ import sys
 import os
 from pathlib import Path
 
-from catscraps.reader import read_file
+from rich.table import Table
+from catscraps.reader import read_file, read_classic_file
 from catscraps.plotter import create_plot
 
 app = typer.Typer(help="Benchmark visualization tool")
 console = Console()
+
+
+@app.command()
+def table(
+    files: list[Path] = typer.Argument(None, help="List of benchmark files to display"),
+):
+    """Display benchmark data in a table."""
+    if not files:
+        console.print("[red]Error: At least one file must be provided[/red]")
+        raise typer.Exit(1)
+
+    table = Table(title="Benchmark Results")
+
+    # Add columns
+    table.add_column("Model", style="cyan")
+    table.add_column("Date", style="dim")
+    table.add_column("Pass 1", justify="right")
+    table.add_column("Pass 2", justify="right")
+    table.add_column("Cost/Case", justify="right")
+    table.add_column("Tok/Case", justify="right")
+    table.add_column("Sec/Case", justify="right")
+
+    for filepath in files:
+        if not filepath.exists():
+            console.print(f"[red]Error: File '{filepath}' not found[/red]")
+            continue
+
+        try:
+            # Currently assuming classic format for table view as it has the rich metadata
+            runs = read_classic_file(str(filepath))
+            for run in runs:
+                m = run.metadata
+                o = run.outcomes
+                
+                table.add_row(
+                    m.model,
+                    str(m.date),
+                    f"{o.pass_rate_1:.1f}%",
+                    f"{o.pass_rate_2:.1f}%",
+                    f"${o.mean_cost:.4f}",
+                    f"{int(o.mean_prompt_tokens + o.mean_completion_tokens)}",
+                    f"{o.seconds_per_case:.1f}",
+                )
+        except Exception as e:
+            console.print(f"[red]Error reading {filepath}: {e}[/red]")
+            # Fail fast? Or continue for other files? 
+            # User guideline says fail fast unless explicitly told to catch.
+            # But here we are iterating user inputs. I'll throw.
+            raise typer.Exit(1)
+
+    console.print(table)
 
 
 @app.command()
