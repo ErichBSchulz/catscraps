@@ -22,7 +22,10 @@ def load_benchmarks(files: List[Path]) -> List[Dict[str, Any]]:
                     "Pass 1": run.outcomes.pass_rate_1,
                     "Pass 2": run.outcomes.pass_rate_2,
                     "Cost/Case": run.outcomes.mean_cost,
-                    "Tok/Case": int(run.outcomes.mean_prompt_tokens + run.outcomes.mean_completion_tokens),
+                    "Tok/Case": int(
+                        run.outcomes.mean_prompt_tokens
+                        + run.outcomes.mean_completion_tokens
+                    ),
                     "Sec/Case": run.outcomes.seconds_per_case,
                 }
                 all_data.append(row)

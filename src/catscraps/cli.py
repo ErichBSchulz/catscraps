@@ -94,7 +94,9 @@ def table(
     raw_cols = list(data[0].keys())
     display_cols = [c for c in raw_cols if not c.startswith("_")]
     if "_Short Model" in raw_cols:
-        display_cols = ["File", "Model"] + [c for c in display_cols if c not in ["File", "Model"]]
+        display_cols = ["File", "Model"] + [
+            c for c in display_cols if c not in ["File", "Model"]
+        ]
 
     for col in display_cols:
         justify = "right" if col not in ["File", "Model"] else "left"
@@ -104,8 +106,12 @@ def table(
     for row in data:
         formatted_row = []
         for col in display_cols:
-            val = row["_Short Model"] if col == "Model" and "_Short Model" in row else row[col]
-            
+            val = (
+                row["_Short Model"]
+                if col == "Model" and "_Short Model" in row
+                else row[col]
+            )
+
             if val is None:
                 formatted_row.append("N/A")
             elif col.startswith("Pass"):
