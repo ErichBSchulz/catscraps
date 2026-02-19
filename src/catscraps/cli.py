@@ -79,26 +79,26 @@ def table(
         valid_files.append(f)
 
     try:
-        df = load_benchmarks(valid_files)
+        data = load_benchmarks(valid_files)
     except Exception as e:
         console.print(f"[red]Error loading benchmarks: {e}[/red]")
         raise typer.Exit(1)
 
-    if df.empty:
+    if not data:
         console.print("[yellow]No data found.[/yellow]")
         return
 
     table = Table(title="Benchmark Results")
 
-    # Define columns to display (exclude internal columns starting with _)
-    display_cols = [c for c in df.columns if not c.startswith("_")]
+    # Define columns to display based on first row keys
+    display_cols = [c for c in data[0].keys() if not c.startswith("_")]
 
     for col in display_cols:
         justify = "right" if col not in ["File", "Model"] else "left"
         style = "dim" if col == "File" else ("cyan" if col == "Model" else None)
         table.add_column(col, justify=justify, style=style)
 
-    for _, row in df.iterrows():
+    for row in data:
         table.add_row(*[str(row[c]) for c in display_cols])
 
     console.print(table)

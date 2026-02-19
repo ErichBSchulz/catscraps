@@ -1,14 +1,13 @@
 import re
 import yaml
-import pandas as pd
 from typing import List, Dict, Any, Union
 from pathlib import Path
 from .models import BenchmarkData, ModelResult, BenchmarkRun, RunMetadata, RunOutcomes
 
 
-def load_benchmarks(files: List[Path]) -> pd.DataFrame:
+def load_benchmarks(files: List[Path]) -> List[Dict[str, Any]]:
     """
-    Load benchmark data from multiple files into a unified DataFrame.
+    Load benchmark data from multiple files into a unified list of dictionaries.
     """
     all_data = []
 
@@ -24,12 +23,6 @@ def load_benchmarks(files: List[Path]) -> pd.DataFrame:
                     "Cost/Case": f"${run.outcomes.mean_cost:.4f}",
                     "Tok/Case": f"{int(run.outcomes.mean_prompt_tokens + run.outcomes.mean_completion_tokens)}",
                     "Sec/Case": f"{run.outcomes.seconds_per_case:.1f}",
-                    # Raw values for plotting later if needed
-                    "_pass_rate_1": run.outcomes.pass_rate_1,
-                    "_pass_rate_2": run.outcomes.pass_rate_2,
-                    "_total_cost": run.outcomes.total_cost,
-                    "_model_name": run.metadata.short_name,
-                    "_run_name": filepath.stem,
                 }
                 all_data.append(row)
         else:
@@ -44,19 +37,13 @@ def load_benchmarks(files: List[Path]) -> pd.DataFrame:
                     "Model": res.name,
                     "Pass 1": f"{p1:.1f}%",
                     "Pass 2": f"{p2:.1f}%",
-                    "Cost/Case": f"${res.total_cost:.4f}",  # Note: dwash format total_cost is actually per case in example? Assuming raw matches.
+                    "Cost/Case": f"${res.total_cost:.4f}",
                     "Tok/Case": "N/A",
                     "Sec/Case": "N/A",
-                    # Raw values
-                    "_pass_rate_1": p1,
-                    "_pass_rate_2": p2,
-                    "_total_cost": res.total_cost,
-                    "_model_name": res.name,
-                    "_run_name": run_name,
                 }
                 all_data.append(row)
 
-    return pd.DataFrame(all_data)
+    return all_data
 
 
 def read_file(filepath: str, run_name: str, format: str) -> BenchmarkData:
