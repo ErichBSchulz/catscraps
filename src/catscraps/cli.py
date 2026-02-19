@@ -45,7 +45,7 @@ def table(
             for run in runs:
                 m = run.metadata
                 o = run.outcomes
-                
+
                 table.add_row(
                     m.model,
                     str(m.date),
@@ -57,7 +57,7 @@ def table(
                 )
         except Exception as e:
             console.print(f"[red]Error reading {filepath}: {e}[/red]")
-            # Fail fast? Or continue for other files? 
+            # Fail fast? Or continue for other files?
             # User guideline says fail fast unless explicitly told to catch.
             # But here we are iterating user inputs. I'll throw.
             raise typer.Exit(1)
