@@ -87,27 +87,41 @@ def table(
             continue
 
         try:
-            # Currently assuming classic format for table view as it has the rich metadata
-            if filepath.suffix not in [".yml", ".yaml"]:
-                logger.warning(
-                    "Skipping %s: table view only supports classic YAML files", filepath
-                )
-                continue
+            if filepath.suffix in [".yml", ".yaml"]:
+                runs = read_classic_file(str(filepath))
+                for run in runs:
+                    m = run.metadata
+                    o = run.outcomes
 
-            runs = read_classic_file(str(filepath))
-            for run in runs:
-                m = run.metadata
-                o = run.outcomes
+                    table.add_row(
+                        m.model,
+                        str(m.date),
+                        f"{o.pass_rate_1:.1f}%",
+                        f"{o.pass_rate_2:.1f}%",
+                        f"${o.mean_cost:.4f}",
+                        f"{int(o.mean_prompt_tokens + o.mean_completion_tokens)}",
+                        f"{o.seconds_per_case:.1f}",
+                    )
+            else:
+                # Assume dwash20260217 format for other files (txt)
+                # This format has less metadata, so we fill with N/A
+                run_name = filepath.stem.replace("_", " ")
+                benchmark_data = read_file(str(filepath), run_name, format="dwash20260217")
+                
+                for result in benchmark_data.results:
+                    p1 = result.pass_rates[0] if len(result.pass_rates) > 0 else 0.0
+                    p2 = result.pass_rates[1] if len(result.pass_rates) > 1 else p1
+                    
+                    table.add_row(
+                        result.name,
+                        "N/A",  # Date
+                        f"{p1:.1f}%",
+                        f"{p2:.1f}%",
+                        f"${result.total_cost:.4f}",
+                        "N/A",  # Tok/Case
+                        "N/A",  # Sec/Case
+                    )
 
-                table.add_row(
-                    m.model,
-                    str(m.date),
-                    f"{o.pass_rate_1:.1f}%",
-                    f"{o.pass_rate_2:.1f}%",
-                    f"${o.mean_cost:.4f}",
-                    f"{int(o.mean_prompt_tokens + o.mean_completion_tokens)}",
-                    f"{o.seconds_per_case:.1f}",
-                )
         except Exception as e:
             console.print(f"[red]Error reading {filepath}: {e}[/red]")
             # Fail fast? Or continue for other files?
