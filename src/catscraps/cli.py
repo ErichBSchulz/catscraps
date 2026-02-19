@@ -94,7 +94,7 @@ def table(
                     o = run.outcomes
 
                     table.add_row(
-                        m.model,
+                        m.short_name,
                         str(m.date),
                         f"{o.pass_rate_1:.1f}%",
                         f"{o.pass_rate_2:.1f}%",

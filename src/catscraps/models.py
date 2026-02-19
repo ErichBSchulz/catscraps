@@ -15,6 +15,15 @@ class RunMetadata(BaseModel):
     date: Optional[Any] = None
     versions: Optional[str] = None
 
+    @computed_field
+    def short_name(self) -> str:
+        # trim the first word and hyphen/slash
+        # e.g. openrouter/foo -> foo
+        # e.g. openrouter-foo -> foo
+        import re
+
+        return re.sub(r"^[^/-]+[/-]", "", self.model)
+
 
 class RunOutcomes(BaseModel):
     """Outcomes and metrics from the benchmark."""
@@ -43,6 +52,14 @@ class RunOutcomes(BaseModel):
     total_tests: int
     pass_num_1: int
     pass_num_2: int
+
+    @computed_field
+    def short_name(self) -> str:
+        # trim the first word and hyphen/slash
+        # e.g. openrouter/foo -> foo
+        # e.g. openrouter-foo -> foo
+        import re
+        return re.sub(r"^[^/-]+[/-]", "", self.model)
 
     @computed_field
     def mean_cost(self) -> float:

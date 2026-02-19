@@ -76,6 +76,16 @@ def read_classic_file(filepath: str) -> List[BenchmarkRun]:
         if test_cases is None:
             meta_data["test_cases"] = total_tests
 
+        # Fallback for date from directory name if missing
+        if "date" not in meta_data or not meta_data["date"]:
+            # Try to find a date-like string (YYYYMMDD or YYYY-MM-DD) in the path
+            # The user example: data/dwash/20260217/hashline-more.yml
+            path_parts = Path(filepath).parts
+            for part in reversed(path_parts):
+                if re.match(r"20\d{2}[-]?\d{2}[-]?\d{2}", part):
+                    meta_data["date"] = part
+                    break
+
         try:
             metadata = RunMetadata(**meta_data)
             outcomes = RunOutcomes(**outcome_data)
