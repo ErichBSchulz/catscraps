@@ -73,8 +73,8 @@ def table(
     table = Table(title="Benchmark Results")
 
     # Add columns
+    table.add_column("File", style="dim")
     table.add_column("Model", style="cyan")
-    table.add_column("Date", style="dim")
     table.add_column("Pass 1", justify="right")
     table.add_column("Pass 2", justify="right")
     table.add_column("Cost/Case", justify="right")
@@ -94,8 +94,8 @@ def table(
                     o = run.outcomes
 
                     table.add_row(
+                        filepath.name,
                         m.short_name,
-                        str(m.date),
                         f"{o.pass_rate_1:.1f}%",
                         f"{o.pass_rate_2:.1f}%",
                         f"${o.mean_cost:.4f}",
@@ -115,8 +115,8 @@ def table(
                     p2 = result.pass_rates[1] if len(result.pass_rates) > 1 else p1
 
                     table.add_row(
+                        filepath.name,
                         result.name,
-                        "N/A",  # Date
                         f"{p1:.1f}%",
                         f"{p2:.1f}%",
                         f"${result.total_cost:.4f}",
