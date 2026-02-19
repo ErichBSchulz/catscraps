@@ -106,12 +106,14 @@ def table(
                 # Assume dwash20260217 format for other files (txt)
                 # This format has less metadata, so we fill with N/A
                 run_name = filepath.stem.replace("_", " ")
-                benchmark_data = read_file(str(filepath), run_name, format="dwash20260217")
-                
+                benchmark_data = read_file(
+                    str(filepath), run_name, format="dwash20260217"
+                )
+
                 for result in benchmark_data.results:
                     p1 = result.pass_rates[0] if len(result.pass_rates) > 0 else 0.0
                     p2 = result.pass_rates[1] if len(result.pass_rates) > 1 else p1
-                    
+
                     table.add_row(
                         result.name,
                         "N/A",  # Date
