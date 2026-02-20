@@ -4,15 +4,21 @@ A tool for visualizing and analyzing benchmark results.
 
 ## Features
 
-- **Multi-format Support**: Loads data from legacy `dwash` text files and modern YAML formats.
-- **Flexible Loading**: Accepts multiple files or globs (handled by your shell).
+- **Multi-format Support**: Loads data from legacy `dwash`
+  text files and modern YAML formats.
+- **Flexible Loading**: Accepts multiple files or globs
+  (handled by your shell).
 - **Data Analysis**:
-  - **Filtering**: Use standard pandas query strings via `--query` to include/exclude specific records.
-  - **Grouping**: Aggregate results by fields like Model, Edit Format, or Commit using `--group-by`.
+  - **Filtering**: Use standard pandas query strings via
+    `--query` to include/exclude specific records.
+  - **Grouping**: Aggregate results by fields like Model,
+    Edit Format, or Commit using `--group-by`.
 - **Visualization**:
   - **Table**: tabular view with confidence intervals.
-  - **Plot**: Generate comparison plots (Pass Rate vs Cost, etc).
-  - **Info**: Inspect the structure and schema of your loaded dataset.
+  - **Plot**: Generate comparison plots (Pass Rate vs Cost,
+    etc).
+  - **Info**: Inspect the structure and schema of your
+    loaded dataset.
 
 ## Installation
 
@@ -22,7 +28,8 @@ uv pip install -e .
 
 ## Usage
 
-The tool provides several subcommands. Use `--help` on any command for details.
+The tool provides several subcommands. Use `--help` on any
+command for details.
 
 ### 1. Inspect Data Structure
 
@@ -34,7 +41,8 @@ catscraps info data/*.yml
 
 ### 2. Tabulate Results
 
-View a text table of results. You can filter specific models and group repeats:
+View a text table of results. You can filter specific models
+and group repeats:
 
 ```bash
 # Basic table
@@ -61,11 +69,15 @@ catscraps plot data/**/*.yml \
 
 ## Architecture
 
-The application loads disparate file formats into a unified Pandas DataFrame.
+The application loads disparate file formats into a unified
+Pandas DataFrame.
 
-1. **Reader**: Parses `dwash` text blocks and `classic` YAML lists into normalized records.
-2. **Models**: Pydantic models enforce schema consistency for metadata and outcomes.
-3. **Processing**: Pandas is used for querying, grouping, and aggregation.
+1. **Reader**: Parses `dwash` text blocks and `classic` YAML
+   lists into normalized records.
+2. **Models**: Pydantic models enforce schema consistency
+   for metadata and outcomes.
+3. **Processing**: Pandas is used for querying, grouping,
+   and aggregation.
 4. **Output**: Rich text tables or Matplotlib charts.
 
 ## Development
