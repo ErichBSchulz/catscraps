@@ -9,9 +9,9 @@ import os
 from pathlib import Path
 
 from rich.table import Table
+import pandas as pd
 from catscraps.reader import read_file, load_benchmarks
 from catscraps.plotter import create_plot
-from catscraps.grouper import group_and_aggregate
 from catscraps.models import BenchmarkData, ModelResult
 
 # Configure logger
@@ -97,35 +97,97 @@ def table(
         valid_files.append(f)
 
     try:
-        data = load_benchmarks(valid_files)
+        df = load_benchmarks(valid_files)
     except Exception as e:
         console.print(f"[red]Error loading benchmarks: {e}[/red]")
         raise typer.Exit(1)
 
-    if group_by:
-        data = group_and_aggregate(data, group_by)
-
-    if not data:
+    if df.empty:
         console.print("[yellow]No data found.[/yellow]")
         return
 
+    # Normalize DataFrame for display
+    # We rely on specific columns being present or we create them
+    
+    # Map 'model' to 'Model' but use Short Model for display values
+    df["Model"] = df.get("Short Model", df.get("model", "Unknown"))
+    
+    # Calculate Cost/Case if not explicit
+    # Logic: if 'mean_cost' exists use it, else calculate from total_cost / test_cases
+    if "Cost/Case" not in df.columns:
+        if "mean_cost" in df.columns:
+            df["Cost/Case"] = df["mean_cost"]
+        elif "total_cost" in df.columns and "test_cases" in df.columns:
+            # handle potential non-numeric or zero division
+            def _calc_cost(r):
+                try:
+                    tc = float(r["total_cost"])
+                    n = float(r["test_cases"])
+                    return tc / n if n > 0 else 0.0
+                except (ValueError, TypeError):
+                    return r.get("total_cost", 0.0) # Fallback
+            df["Cost/Case"] = df.apply(_calc_cost, axis=1)
+        elif "total_cost" in df.columns:
+            # dwash format often puts total cost for the run, but reader puts it in 'total_cost'.
+            # Without 'test_cases', we might just display total_cost as is, or 0.
+            # But the table expects Cost/Case.
+            df["Cost/Case"] = df["total_cost"]
+
+    # Map other standard columns
+    col_map = {
+        "pass_rate_1": "Pass 1",
+        "pass_rate_2": "Pass 2",
+        "test_cases": "N",
+        "edit_format": "Edit Format",
+        "commit_hash": "Commit",
+        "seconds_per_case": "Sec/Case"
+    }
+    
+    for src, dst in col_map.items():
+        if src in df.columns and dst not in df.columns:
+            df[dst] = df[src]
+
+    # Handle Grouping
+    if group_by:
+        # If grouping, we aggregate numeric columns and first/unique for others
+        # group_by is a list of column names
+        valid_groups = [g for g in group_by if g in df.columns]
+        if valid_groups:
+            # Define aggregation rules
+            # We want mean for pass rates and costs, sum for N?
+            # Actually typically we want mean across the group for comparison.
+            agg_rules = {
+                "Pass 1": "mean",
+                "Pass 2": "mean",
+                "Cost/Case": "mean",
+                "N": "sum", # Or mean? Usually N is sum of cases if splitting, or if repeated runs, maybe sum.
+                            # But here we probably want mean metrics.
+            }
+            # Only use rules for columns that exist
+            agg_rules = {k: v for k, v in agg_rules.items() if k in df.columns}
+            
+            df = df.groupby(valid_groups, as_index=False).agg(agg_rules)
+
+    # Prepare Table
     table = Table(title="Benchmark Results")
 
-    # Define columns to display, substituting Model for _Short Model
-    raw_cols = list(data[0].keys())
-
-    # Prioritize group_by columns if set, otherwise standard order
-    ordered_cols = []
+    # Determine columns to show
+    # Standard columns
+    std_cols = ["File", "Model", "Edit Format", "Commit", "N", "Pass 1", "Pass 2", "Cost/Case", "Sec/Case"]
+    
+    # Columns to actually display
+    display_cols = []
+    
+    # If grouping, put group columns first
     if group_by:
-        ordered_cols = [c for c in group_by if c in raw_cols]
+        for g in group_by:
+            if g in df.columns and g not in display_cols:
+                display_cols.append(g)
 
-    # Add standard columns if they aren't in group_by
-    for std in ["File", "Model", "Edit Format", "Commit", "N"]:
-        if std not in ordered_cols and std in raw_cols:
-            ordered_cols.append(std)
-
-    remaining = [c for c in raw_cols if c not in ordered_cols and not c.startswith("_")]
-    display_cols = ordered_cols + remaining
+    # Add standard cols if present
+    for c in std_cols:
+        if c in df.columns and c not in display_cols:
+            display_cols.append(c)
 
     for col in display_cols:
         justify = "right"
@@ -135,23 +197,21 @@ def table(
         style = "dim" if col == "File" else ("cyan" if col == "Model" else None)
         table.add_column(col, justify=justify, style=style)
 
-    for row in data:
+    for _, row in df.iterrows():
         formatted_row = []
         for col in display_cols:
-            val = (
-                row["_Short Model"]
-                if col == "Model" and "_Short Model" in row
-                else row[col]
-            )
+            val = row[col]
 
-            if val is None:
+            if pd.isna(val) or val == "N/A":
                 formatted_row.append("N/A")
             elif col.startswith("Pass"):
-                formatted_row.append(f"{val:.1f}%")
+                formatted_row.append(f"{float(val):.1f}%")
             elif col == "Cost/Case":
-                formatted_row.append(f"${val:.4f}")
+                formatted_row.append(f"${float(val):.4f}")
             elif col == "Sec/Case":
-                formatted_row.append(f"{val:.1f}")
+                formatted_row.append(f"{float(val):.1f}")
+            elif col == "N":
+                formatted_row.append(str(int(val)))
             else:
                 formatted_row.append(str(val))
         table.add_row(*formatted_row)
@@ -222,68 +282,55 @@ def plot(
         console.print("[red]Error: At least one file must be provided[/red]")
         raise typer.Exit(1)
 
-    # Read all benchmark files
-    benchmark_data_list = []
+    # Read all benchmark files using pandas loader
+    try:
+        df = load_benchmarks(all_files)
+    except Exception as e:
+        console.print(f"[red]Error loading benchmarks: {e}[/red]")
+        raise typer.Exit(1)
 
+    if df.empty:
+        console.print("[red]No data found to plot[/red]")
+        raise typer.Exit(1)
+
+    # Process group_by if needed for plot
+    # The plotter expects data structured by run/file usually.
+    # If grouping, we likely want to aggregate data across the groups.
+    # For plotting, usually we want to see Models vs Pass Rates.
+    # If group_by is set, we might be grouping by Model (aggregating runs) 
+    # OR grouping by Run (aggregating models? unlikely).
+    # The previous logic seemed to create one 'Aggregated' run containing the grouped results.
+    
     if group_by:
-        # Load all flattened data
-        try:
-            flat_data = load_benchmarks(all_files)
-        except Exception as e:
-            console.print(f"[red]Error loading benchmarks: {e}[/red]")
-            raise typer.Exit(1)
-
-        grouped_data = group_and_aggregate(flat_data, group_by)
-
-        # Convert to single BenchmarkData object
-        results = []
-        for row in grouped_data:
-            # Construct a display name from group keys
-            name_parts = [str(row.get(g, "")) for g in group_by]
-            m_name = " ".join(name_parts)
-
-            p1 = row.get("Pass 1", 0.0) or 0.0
-            p2 = row.get("Pass 2", 0.0) or 0.0
-            cost = row.get("Cost/Case", 0.0) or 0.0
-
-            results.append(
-                ModelResult(name=m_name, pass_rates=[p1, p2], total_cost=cost)
-            )
-
-        if results:
-            benchmark_data_list.append(
-                BenchmarkData(run_name="Aggregated", results=results)
-            )
-
-    else:
-        with Progress(
-            SpinnerColumn(),
-            TextColumn("[progress.description]{task.description}"),
-            console=console,
-        ) as progress:
-            task = progress.add_task("Reading benchmark files...", total=len(all_files))
-
-            for filepath in all_files:
-                run_name = filepath.stem.replace("_", " ")
-                if not filepath.exists():
-                    console.print(f"[red]Error: File '{filepath}' not found[/red]")
-                    raise typer.Exit(1)
-
-                try:
-                    benchmark_data = read_file(
-                        str(filepath), run_name, format=input_format
-                    )
-                    benchmark_data_list.append(benchmark_data)
-                    progress.update(task, advance=1, description=f"Read {filepath}")
-                except Exception as e:
-                    console.print(f"[red]Error reading {filepath}: {e}[/red]")
-                    raise typer.Exit(1)
+        valid_groups = [g for g in group_by if g in df.columns]
+        if valid_groups:
+             # Aggregate numeric fields
+             agg_rules = {
+                "pass_rate_1": "mean",
+                "pass_rate_2": "mean",
+                "total_cost": "mean",
+                # We need a model name for the plot
+                "Short Model": "first" if "Short Model" not in valid_groups else None
+             }
+             # Only existing columns
+             agg_rules = {k: v for k, v in agg_rules.items() if k in df.columns and v is not None}
+             
+             df = df.groupby(valid_groups, as_index=False).agg(agg_rules)
+             
+             # If we grouped, we effectively have one "set" of results (one run)
+             df["File"] = "Aggregated"
+             
+             # If the model name was part of the group, we might want to construct a composite name
+             # if 'Short Model' wasn't preserved or is ambiguous.
+             if "Short Model" not in df.columns:
+                 # Construct name from groups
+                 df["Short Model"] = df[valid_groups].apply(lambda x: " ".join(x.astype(str)), axis=1)
 
     # Create the plot
     with console.status("[bold green]Creating plot...") as status:
         try:
             create_plot(
-                benchmark_data_list=benchmark_data_list,
+                df=df,
                 show_cost=show_cost,
                 output_file=output,
                 plot_type=plot_type,
@@ -291,7 +338,8 @@ def plot(
             console.print(f"[green]✓ Graph saved to {output}[/green]")
         except Exception as e:
             console.print(f"[red]Error creating plot: {e}[/red]")
-            raise typer.Exit(1)
+            # raise typer.Exit(1) # Fail fast?
+            raise e
 
     # Auto-open if requested
     if auto_open:

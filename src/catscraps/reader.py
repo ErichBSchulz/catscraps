@@ -1,6 +1,7 @@
 import re
 import yaml
 import logging
+import pandas as pd
 from typing import List, Dict, Any, Union
 from pathlib import Path
 from .models import BenchmarkData, ModelResult, BenchmarkRun, RunMetadata, RunOutcomes
@@ -8,79 +9,118 @@ from .models import BenchmarkData, ModelResult, BenchmarkRun, RunMetadata, RunOu
 logger = logging.getLogger(__name__)
 
 
-def load_benchmarks(files: List[Path]) -> List[Dict[str, Any]]:
+def load_benchmarks(files: List[Path]) -> pd.DataFrame:
     """
-    Load benchmark data from multiple files into a unified list of dictionaries.
+    Load benchmark data from multiple files into a unified pandas DataFrame.
     """
-    all_data = []
+    all_rows = []
 
     for filepath in files:
         # Skip meta files if they are passed directly
         if filepath.name.endswith("_meta.yml"):
             continue
 
+        file_rows = []
         if filepath.suffix in [".yml", ".yaml"]:
-            runs = _read_classic_file(str(filepath))
-            for run in runs:
-                row = {
-                    "File": filepath.name,
-                    "Model": run.metadata.model,
-                    "_Short Model": run.metadata.short_name,
-                    "Pass 1": run.outcomes.pass_rate_1,
-                    "Pass 2": run.outcomes.pass_rate_2,
-                    "Cost/Case": run.outcomes.mean_cost,
-                    "Tok/Case": int(
-                        run.outcomes.mean_prompt_tokens
-                        + run.outcomes.mean_completion_tokens
-                    ),
-                    "Sec/Case": run.outcomes.seconds_per_case,
-                    "Edit Format": run.metadata.edit_format,
-                    "Commit": run.metadata.commit_hash,
-                    "N": run.metadata.test_cases,
-                }
-                all_data.append(row)
+            # Classic format
+            # We treat the list of dicts as rows
+            with open(filepath, "r") as f:
+                data = yaml.safe_load(f)
+            if not isinstance(data, list):
+                data = [data]
+            
+            # Flatten slightly for DataFrame
+            for entry in data:
+                # Basic flattening based on expected structure if needed, 
+                # but currently 'classic' files are fairly flat dictionaries.
+                entry["File"] = filepath.name
+                file_rows.append(entry)
         else:
             # dwash format
-            run_name = filepath.stem.replace("_", " ")
-            bd = _read_dwash20260217_file(str(filepath), run_name)
+            dwash_rows = _read_dwash20260217_file_raw(str(filepath))
+            for r in dwash_rows:
+                r["File"] = filepath.name
+                file_rows.append(r)
 
-            # Look for sidecar metadata
-            meta_path = filepath.with_name(filepath.name + "_meta.yml")
-            meta_dict = {}
-            if meta_path.exists():
-                with open(meta_path, "r") as f:
-                    meta_dict = yaml.safe_load(f) or {}
+        # Apply sidecar metadata
+        meta_path = filepath.with_name(filepath.name + "_meta.yml")
+        if meta_path.exists():
+            with open(meta_path, "r") as f:
+                sidecar_meta = yaml.safe_load(f) or {}
+            
+            # Apply metadata to all rows from this file
+            for row in file_rows:
+                for k, v in sidecar_meta.items():
+                    row[k] = v
 
-            for res in bd.results:
-                p1 = res.pass_rates[0] if len(res.pass_rates) > 0 else 0.0
-                p2 = res.pass_rates[1] if len(res.pass_rates) > 1 else p1
+        all_rows.extend(file_rows)
 
-                # Use a temporary RunMetadata to reuse the short_name logic safely
-                # This ensures consistency with the model logic defined in RunMetadata
-                temp_meta = RunMetadata(
-                    results_dir="",
-                    test_cases=0,
-                    model=res.name,
-                    edit_format="",
-                    commit_hash="",
-                )
+    if not all_rows:
+        return pd.DataFrame()
 
-                row = {
-                    "File": filepath.name,
-                    "Model": res.name,
-                    "_Short Model": temp_meta.short_name,
-                    "Pass 1": p1,
-                    "Pass 2": p2,
-                    "Cost/Case": res.total_cost,
-                    "Tok/Case": None,
-                    "Sec/Case": None,
-                    "Edit Format": meta_dict.get("edit_format", "N/A"),
-                    "Commit": meta_dict.get("commit_hash", "N/A"),
-                    "N": meta_dict.get("test_cases", "N/A"),
-                }
-                all_data.append(row)
+    df = pd.DataFrame(all_rows)
 
-    return all_data
+    # Normalize columns if needed.
+    # We expect columns like: model, pass_rate_1, pass_rate_2, total_cost, test_cases, etc.
+    
+    # Calculate Short Model
+    if "model" in df.columns:
+        df["Short Model"] = df["model"].apply(_get_short_name)
+    else:
+        df["Short Model"] = "Unknown"
+
+    return df
+
+
+def _get_short_name(name: Any) -> str:
+    if not isinstance(name, str):
+        return str(name)
+    
+    if "/" in name:
+        return name.split("/")[-1]
+    # Logic from older code: if len > 10 and "-" in name, split on first dash
+    # The previous code was: "-".join(name.split("-")[1:])
+    # But only if len > 10 and "-" in name.
+    if len(name) > 10 and "-" in name:
+         return "-".join(name.split("-")[1:])
+    return name
+
+
+def _read_dwash20260217_file_raw(filepath: str) -> List[Dict[str, Any]]:
+    """
+    Read a dwash20260217 format file into a list of dicts.
+    """
+    with open(filepath, "r") as f:
+        content = f.read()
+
+    # Split by model headers, capturing the model name
+    parts = re.split(r"===\s+.*?openrouter-(.*?)\s+===", content)
+    rows = []
+
+    # parts[0] is preamble, then name, body, name, body...
+    for i in range(1, len(parts), 2):
+        name = parts[i].replace("primary-variation-", "").strip()
+        body = parts[i + 1]
+
+        # Extract all pass rates in order
+        pass_rates = [float(m) for m in re.findall(r"pass_rate_\d+:\s+([\d.]+)", body)]
+
+        # Extract total cost
+        cost_match = re.search(r"total_cost:\s+([\d.]+)", body)
+        cost = float(cost_match.group(1)) if cost_match else 0.0
+
+        p1 = pass_rates[0] if len(pass_rates) > 0 else 0.0
+        p2 = pass_rates[1] if len(pass_rates) > 1 else p1
+
+        rows.append({
+            "model": name,
+            "pass_rate_1": p1,
+            "pass_rate_2": p2,
+            "total_cost": cost,
+            # We don't have other metrics in this format usually
+        })
+
+    return rows
 
 
 def read_file(filepath: str, run_name: str, format: str) -> BenchmarkData:
