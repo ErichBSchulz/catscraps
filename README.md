@@ -2,6 +2,12 @@
 
 A tool for visualizing and analyzing benchmark results.
 
+## Data & Contributions
+
+**We want your data!**
+
+Please see [data/README.md](data/README.md) for instructions on how to structure and submit your benchmark results. We encourage Pull Requests with new data to help build a comprehensive view of model performance.
+
 ## Features
 
 - **Multi-format Support**: Loads data from different YAML formats. 
