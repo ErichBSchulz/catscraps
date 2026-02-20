@@ -65,6 +65,7 @@ class RunOutcomes(BaseModel):
             return self.model.split("/")[-1]
 
         import re
+
         return re.sub(r"^[^/-]+[/-]", "", self.model)
 
     @computed_field
