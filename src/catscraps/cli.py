@@ -48,22 +48,11 @@ def parse_group_by(ctx, param, value):
 
 
 @app.callback()
-def main(
-    verbose: int = typer.Option(
-        0,
-        "--verbose",
-        "-v",
-        count=True,
-        help="Increase verbosity (use -v for INFO, -vv for DEBUG)",
-    ),
-    quiet: bool = typer.Option(
-        False, "--quiet", "-q", help="Suppress all output except errors"
-    ),
-):
+def main():
     """
     Benchmark visualization tool.
     """
-    configure_logging(verbose, quiet)
+    pass
 
 
 @app.command()
@@ -76,8 +65,20 @@ def table(
         help="Comma separated fields to group by. Use 'default' for standard grouping.",
         callback=parse_group_by,
     ),
+    verbose: int = typer.Option(
+        0,
+        "--verbose",
+        "-v",
+        count=True,
+        help="Increase verbosity (use -v for INFO, -vv for DEBUG)",
+    ),
+    quiet: bool = typer.Option(
+        False, "--quiet", "-q", help="Suppress all output except errors"
+    ),
 ):
     """Display benchmark data in a table."""
+    configure_logging(verbose, quiet)
+
     if not files:
         console.print("[red]Error: At least one file must be provided[/red]")
         raise typer.Exit(1)
@@ -186,12 +187,24 @@ def plot(
         help="Comma separated fields to group by. Aggregates data if set.",
         callback=parse_group_by,
     ),
+    verbose: int = typer.Option(
+        0,
+        "--verbose",
+        "-v",
+        count=True,
+        help="Increase verbosity (use -v for INFO, -vv for DEBUG)",
+    ),
+    quiet: bool = typer.Option(
+        False, "--quiet", "-q", help="Suppress all output except errors"
+    ),
 ):
     """
     Create a visualization of benchmark results.
 
     The first file determines the model order.
     """
+    configure_logging(verbose, quiet)
+
     all_files = list(files) if files else []
     if file_list:
         if not file_list.exists():
@@ -292,8 +305,20 @@ def plot(
 
 
 @app.command()
-def version():
+def version(
+    verbose: int = typer.Option(
+        0,
+        "--verbose",
+        "-v",
+        count=True,
+        help="Increase verbosity (use -v for INFO, -vv for DEBUG)",
+    ),
+    quiet: bool = typer.Option(
+        False, "--quiet", "-q", help="Suppress all output except errors"
+    ),
+):
     """Show version information."""
+    configure_logging(verbose, quiet)
     console.print("Benchmark Plotter v0.1.0")
 
 
