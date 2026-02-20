@@ -20,6 +20,9 @@ class RunMetadata(BaseModel):
         # trim the first word and hyphen/slash
         # e.g. openrouter/foo -> foo
         # e.g. openrouter-foo -> foo
+        if "/" in self.model:
+            return self.model.split("/")[-1]
+
         import re
 
         return re.sub(r"^[^/-]+[/-]", "", self.model)
@@ -58,6 +61,9 @@ class RunOutcomes(BaseModel):
         # trim the first word and hyphen/slash
         # e.g. openrouter/foo -> foo
         # e.g. openrouter-foo -> foo
+        if "/" in self.model:
+            return self.model.split("/")[-1]
+
         import re
         return re.sub(r"^[^/-]+[/-]", "", self.model)
 
