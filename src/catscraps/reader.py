@@ -114,13 +114,15 @@ def _read_dwash20260217_file_raw(filepath: str) -> List[Dict[str, Any]]:
         p1 = pass_rates[0] if len(pass_rates) > 0 else 0.0
         p2 = pass_rates[1] if len(pass_rates) > 1 else p1
 
-        rows.append({
-            "model": name,
-            "pass_rate_1": p1,
-            "pass_rate_2": p2,
-            "total_cost": cost,
-            # We don't have other metrics in this format usually
-        })
+        rows.append(
+            {
+                "model": name,
+                "pass_rate_1": p1,
+                "pass_rate_2": p2,
+                "total_cost": cost,
+                # We don't have other metrics in this format usually
+            }
+        )
 
     return rows
 

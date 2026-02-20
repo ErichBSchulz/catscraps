@@ -165,10 +165,10 @@ def table(
         "Pass 2",
         "Cost/Case",
     ]
-    
+
     # Columns to actually display
     display_cols = []
-    
+
     # If grouping, put group columns first
     if group_by:
         for g in group_by:
