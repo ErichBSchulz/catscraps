@@ -1,19 +1,18 @@
-This is the start of repo to collect results.
-
-Ultimately we need a few thinsgs:
-
-- respository for atomic level results (requirement cheap, open, append only)
-- exchange format for both aggregate (summary counts), `test level summary`
-  (results for every scenario), `full` (diffs and outcome for each scenario)
-- standard definition of test metadata beyond ['model', 'coder hash',
-  `scenerio/cat id`] we need to add [`settings`] (or hyperparameters) that
-  influece (eg "diff format", "coder prompat", ?mcp config etc)
-
-For now this is just a messy collection of results so far.
-
 # Catscraps Benchmark Visualization
 
-A tool for visualizing benchmark results in dwash20260217 format.
+A tool for visualizing and analyzing benchmark results.
+
+## Features
+
+- **Multi-format Support**: Loads data from legacy `dwash` text files and modern YAML formats.
+- **Flexible Loading**: Accepts multiple files or globs (handled by your shell).
+- **Data Analysis**:
+  - **Filtering**: Use standard pandas query strings via `--query` to include/exclude specific records.
+  - **Grouping**: Aggregate results by fields like Model, Edit Format, or Commit using `--group-by`.
+- **Visualization**:
+  - **Table**: tabular view with confidence intervals.
+  - **Plot**: Generate comparison plots (Pass Rate vs Cost, etc).
+  - **Info**: Inspect the structure and schema of your loaded dataset.
 
 ## Installation
 
@@ -23,30 +22,51 @@ uv pip install -e .
 
 ## Usage
 
-### CLI Tool
+The tool provides several subcommands. Use `--help` on any command for details.
+
+### 1. Inspect Data Structure
+
+See what columns and data types are available in your files:
 
 ```bash
-# Basic usage with two files
-plot-benchmark run1.txt run2.txt
-
-# With options
-plot-benchmark run1.txt run2.txt --auto-open --no-show-cost --output myplot.png
-
-# Show help
-plot-benchmark --help
+catscraps info data/*.yml
 ```
 
+### 2. Tabulate Results
 
-## File Format
+View a text table of results. You can filter specific models and group repeats:
 
-The current benchmark dwash20260217 format is deprecated:
+```bash
+# Basic table
+catscraps table data/dwash/20260217/*.txt
 
+# Filter and group
+catscraps table data/**/*.yml --query "model.str.contains('claude')" --group-by default
 ```
-=== openrouter-model-name ===
-pass_rate_1: 0.123
-pass_rate_2: 0.456
-total_cost: 0.789
+
+### 3. Plotting
+
+Generate visualizations comparing models or runs.
+
+```bash
+# Compare runs
+catscraps plot run1.txt run2.txt --output comparison.png
+
+# complex plot with filtering
+catscraps plot data/**/*.yml \
+    --query "total_cost < 5.0" \
+    --group-by "model,edit_format" \
+    --auto-open
 ```
+
+## Architecture
+
+The application loads disparate file formats into a unified Pandas DataFrame.
+
+1. **Reader**: Parses `dwash` text blocks and `classic` YAML lists into normalized records.
+2. **Models**: Pydantic models enforce schema consistency for metadata and outcomes.
+3. **Processing**: Pandas is used for querying, grouping, and aggregation.
+4. **Output**: Rich text tables or Matplotlib charts.
 
 ## Development
 

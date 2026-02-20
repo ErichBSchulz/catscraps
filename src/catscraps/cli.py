@@ -51,7 +51,10 @@ def parse_group_by(ctx, param, value):
 @app.callback()
 def main():
     """
-    Benchmark visualization tool.
+    Catscraps: Benchmark visualization and analysis tool.
+
+    Load benchmark data from various file formats, filter with pandas queries,
+    group results, and visualize them via tables or plots.
     """
     pass
 
