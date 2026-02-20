@@ -384,6 +384,46 @@ def plot(
 
 
 @app.command()
+def describe(
+    files: list[Path] = typer.Argument(
+        None, help="List of benchmark files to describe"
+    ),
+    verbose: int = typer.Option(
+        0,
+        "--verbose",
+        "-v",
+        count=True,
+        help="Increase verbosity (use -v for INFO, -vv for DEBUG)",
+    ),
+    quiet: bool = typer.Option(
+        False, "--quiet", "-q", help="Suppress all output except errors"
+    ),
+):
+    """
+    Show standard pandas description of the unified dataset.
+    """
+    configure_logging(verbose, quiet)
+
+    if not files:
+        console.print("[red]Error: At least one file must be provided[/red]")
+        raise typer.Exit(1)
+
+    try:
+        df = load_benchmarks(files)
+    except Exception as e:
+        console.print(f"[red]Error loading benchmarks: {e}[/red]")
+        raise typer.Exit(1)
+
+    if df.empty:
+        console.print("[yellow]No data found.[/yellow]")
+        return
+
+    # Standard pandas describe
+    description = df.describe()
+    console.print(description.to_string())
+
+
+@app.command()
 def version(
     verbose: int = typer.Option(
         0,
