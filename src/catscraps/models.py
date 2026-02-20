@@ -17,9 +17,8 @@ class RunMetadata(BaseModel):
 
     @computed_field
     def short_name(self) -> str:
-        # trim the first word and hyphen/slash
+        # trim the first word and slash
         # e.g. openrouter/foo -> foo
-        # e.g. openrouter-foo -> foo
         import logging
 
         logger = logging.getLogger(__name__)
@@ -29,11 +28,7 @@ class RunMetadata(BaseModel):
             logger.debug("short_name slash trim: '%s' -> '%s'", self.model, result)
             return result
 
-        import re
-
-        result = re.sub(r"^[^/-]+[/-]", "", self.model)
-        logger.debug("short_name regex trim: '%s' -> '%s'", self.model, result)
-        return result
+        return self.model
 
 
 class RunOutcomes(BaseModel):
@@ -66,9 +61,8 @@ class RunOutcomes(BaseModel):
 
     @computed_field
     def short_name(self) -> str:
-        # trim the first word and hyphen/slash
+        # trim the first word and slash
         # e.g. openrouter/foo -> foo
-        # e.g. openrouter-foo -> foo
         import logging
 
         logger = logging.getLogger(__name__)
@@ -78,11 +72,7 @@ class RunOutcomes(BaseModel):
             logger.debug("short_name slash trim: '%s' -> '%s'", self.model, result)
             return result
 
-        import re
-
-        result = re.sub(r"^[^/-]+[/-]", "", self.model)
-        logger.debug("short_name regex trim: '%s' -> '%s'", self.model, result)
-        return result
+        return self.model
 
     @computed_field
     def mean_cost(self) -> float:
