@@ -121,9 +121,7 @@ def table(
         if std not in ordered_cols and std in raw_cols:
             ordered_cols.append(std)
 
-    remaining = [
-        c for c in raw_cols if c not in ordered_cols and not c.startswith("_")
-    ]
+    remaining = [c for c in raw_cols if c not in ordered_cols and not c.startswith("_")]
     display_cols = ordered_cols + remaining
 
     for col in display_cols:
