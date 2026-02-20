@@ -9,7 +9,7 @@ from .models import BenchmarkData, ModelResult, BenchmarkRun, RunMetadata, RunOu
 logger = logging.getLogger(__name__)
 
 
-def load_benchmarks(files: List[Path]) -> pd.DataFrame:
+def load_benchmarks(files: List[Path], query: str = None) -> pd.DataFrame:
     """
     Load benchmark data from multiple files into a unified pandas DataFrame.
     """
@@ -64,6 +64,21 @@ def load_benchmarks(files: List[Path]) -> pd.DataFrame:
 
     # Apply shortname logic
     df = add_short_model_name(df)
+
+    if query:
+        initial_count = len(df)
+        try:
+            df = df.query(query)
+            final_count = len(df)
+            logger.info(
+                "Query '%s' filtered records from %d to %d",
+                query,
+                initial_count,
+                final_count,
+            )
+        except Exception as e:
+            # We fail fast as per conventions
+            raise ValueError(f"Invalid query string '{query}': {e}")
 
     return df
 

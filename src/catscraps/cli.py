@@ -59,6 +59,9 @@ def main():
 @app.command()
 def table(
     files: list[Path] = typer.Argument(None, help="List of benchmark files to display"),
+    query: str = typer.Option(
+        None, "--query", "-Q", help="Pandas query string to filter data"
+    ),
     group_by: str = typer.Option(
         None,
         "--group-by",
@@ -96,7 +99,7 @@ def table(
             raise typer.Exit(1)
 
     try:
-        df = load_benchmarks(files)
+        df = load_benchmarks(files, query=query)
     except Exception as e:
         console.print(f"[red]Error loading benchmarks: {e}[/red]")
         raise typer.Exit(1)
@@ -264,6 +267,9 @@ def table(
 @app.command()
 def plot(
     files: list[Path] = typer.Argument(None, help="List of benchmark files to plot"),
+    query: str = typer.Option(
+        None, "--query", "-Q", help="Pandas query string to filter data"
+    ),
     file_list: Path = typer.Option(
         None, "--file-list", "-l", help="File containing list of benchmark files"
     ),
@@ -326,7 +332,7 @@ def plot(
 
     # Read all benchmark files using pandas loader
     try:
-        df = load_benchmarks(all_files)
+        df = load_benchmarks(all_files, query=query)
     except Exception as e:
         console.print(f"[red]Error loading benchmarks: {e}[/red]")
         raise typer.Exit(1)
@@ -386,6 +392,9 @@ def plot(
 @app.command()
 def info(
     files: list[Path] = typer.Argument(None, help="List of benchmark files to analyze"),
+    query: str = typer.Option(
+        None, "--query", "-Q", help="Pandas query string to filter data"
+    ),
     verbose: int = typer.Option(
         0,
         "--verbose",
@@ -407,7 +416,7 @@ def info(
         raise typer.Exit(1)
 
     try:
-        df = load_benchmarks(files)
+        df = load_benchmarks(files, query=query)
     except Exception as e:
         console.print(f"[red]Error loading benchmarks: {e}[/red]")
         raise typer.Exit(1)
