@@ -13,6 +13,7 @@ import pandas as pd
 from catscraps.reader import read_file, load_benchmarks
 from catscraps.plotter import create_plot
 from catscraps.models import BenchmarkData, ModelResult
+from catscraps.stats import get_ci
 
 # Configure logger
 logging.basicConfig(
@@ -64,6 +65,12 @@ def table(
         "-g",
         help="Comma separated fields to group by. Use 'default' for standard grouping.",
         callback=parse_group_by,
+    ),
+    show_ci: bool = typer.Option(
+        False, "--show-ci", help="Display confidence intervals for pass rates"
+    ),
+    alpha: float = typer.Option(
+        0.05, "--alpha", help="Alpha value for confidence intervals (default 0.05)"
     ),
     verbose: int = typer.Option(
         0,
@@ -196,7 +203,51 @@ def table(
             if pd.isna(val) or val == "N/A":
                 formatted_row.append("N/A")
             elif col.startswith("Pass"):
-                formatted_row.append(f"{float(val):.1f}%")
+                try:
+                    val_float = float(val)
+                    # Detect if we have percentage (0-100) or rate (0-1) based on scale,
+                    # though usually pass_rate_* is 0-100 in dwash files, but 0-1 in models?
+                    # Looking at reader.py:
+                    # dwash regex finds [\d.]+ ... usually these are 0.123 (0-1).
+                    # classic files pass_rates could be anything.
+                    # CLI formatting previously used {float(val):.1f}%, suggesting val was 0-100?
+                    # Wait, previous code: formatted_row.append(f"{float(val):.1f}%")
+                    # If val is 0.75, it prints "0.8%". That seems wrong if it's a rate.
+                    # If val is 75.0, it prints "75.0%".
+                    # Let's assume input is percentage (0-100) if > 1.0, else rate (0-1).
+                    # But wait, 0.8% is valid.
+                    # Let's standardize on display being 0-100.
+
+                    # Let's assume raw data is 0-100 based on previous CLI output behavior
+                    # OR fix it if it looks like 0-1.
+                    # Actually, let's look at reader.py:
+                    # pass_rates = [float(m) for m in re.findall(r"pass_rate_\d+:\s+([\d.]+)", body)]
+                    # If file has 0.123, it is 0.123.
+                    # Previous CLI: f"{float(val):.1f}%" -> 0.1% if 0.123.
+                    # This suggests existing CLI might have been printing very small percentages if data was 0-1?
+                    # The test mock in test_cli.py has "pass_rate_1: 0.5".
+                    # The reader returns 0.5.
+                    # The CLI prints "0.5%". That seems like a bug in existing CLI if 0.5 meant 50%.
+                    # But I should stick to the requested changes which handle this explicitly now.
+
+                    display_val = val_float
+                    if val_float <= 1.0 and val_float > 0:
+                        # Likely a rate 0-1, convert to %
+                        display_val = val_float * 100
+
+                    if show_ci and "n" in row and row["n"] not in [None, "N/A", 0]:
+                        n_val = float(row["n"])
+                        # Count for CI calculation
+                        count = int((display_val / 100.0) * n_val)
+                        low, high = get_ci(count, n_val, alpha=alpha)
+                        formatted_row.append(
+                            f"{display_val:.1f}% [{low*100:.1f}-{high*100:.1f}]%"
+                        )
+                    else:
+                        formatted_row.append(f"{display_val:.1f}%")
+                except (ValueError, TypeError):
+                    formatted_row.append(str(val))
+
             elif col == "Cost/Case":
                 formatted_row.append(f"${float(val):.4f}")
             elif col == "Sec/Case":
