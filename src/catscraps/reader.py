@@ -23,16 +23,12 @@ def load_benchmarks(files: List[Path]) -> pd.DataFrame:
         file_rows = []
         if filepath.suffix in [".yml", ".yaml"]:
             # Classic format
-            # We treat the list of dicts as rows
             with open(filepath, "r") as f:
                 data = yaml.safe_load(f)
             if not isinstance(data, list):
                 data = [data]
-            
-            # Flatten slightly for DataFrame
+
             for entry in data:
-                # Basic flattening based on expected structure if needed, 
-                # but currently 'classic' files are fairly flat dictionaries.
                 entry["File"] = filepath.name
                 file_rows.append(entry)
         else:
@@ -42,13 +38,12 @@ def load_benchmarks(files: List[Path]) -> pd.DataFrame:
                 r["File"] = filepath.name
                 file_rows.append(r)
 
-        # Apply sidecar metadata
+        # Apply sidecar metadata *after* loading data
         meta_path = filepath.with_name(filepath.name + "_meta.yml")
         if meta_path.exists():
             with open(meta_path, "r") as f:
                 sidecar_meta = yaml.safe_load(f) or {}
-            
-            # Apply metadata to all rows from this file
+
             for row in file_rows:
                 for k, v in sidecar_meta.items():
                     row[k] = v
@@ -60,30 +55,37 @@ def load_benchmarks(files: List[Path]) -> pd.DataFrame:
 
     df = pd.DataFrame(all_rows)
 
-    # Normalize columns if needed.
-    # We expect columns like: model, pass_rate_1, pass_rate_2, total_cost, test_cases, etc.
-    
-    # Calculate Short Model
-    if "model" in df.columns:
-        df["Short Model"] = df["model"].apply(_get_short_name)
-    else:
-        df["Short Model"] = "Unknown"
+    # Standardize 'n' column if not present but 'test_cases' or 'total_tests' is
+    if "n" not in df.columns:
+        if "test_cases" in df.columns:
+            df["n"] = df["test_cases"]
+        elif "total_tests" in df.columns:
+            df["n"] = df["total_tests"]
+
+    # Apply shortname logic
+    df = add_short_model_name(df)
 
     return df
 
 
-def _get_short_name(name: Any) -> str:
-    if not isinstance(name, str):
-        return str(name)
-    
-    if "/" in name:
-        return name.split("/")[-1]
-    # Logic from older code: if len > 10 and "-" in name, split on first dash
-    # The previous code was: "-".join(name.split("-")[1:])
-    # But only if len > 10 and "-" in name.
-    if len(name) > 10 and "-" in name:
-         return "-".join(name.split("-")[1:])
-    return name
+def add_short_model_name(df: pd.DataFrame) -> pd.DataFrame:
+    """Adds a 'Short Model' column based on specific logic."""
+    if "model" not in df.columns:
+        df["Short Model"] = "Unknown"
+        return df
+
+    def _get_short_name(name):
+        if not isinstance(name, str):
+            return str(name)
+
+        if "/" in name:
+            return name.split("/")[-1]
+        elif len(name) > 10 and "-" in name:
+            return "-".join(name.split("-")[1:])
+        return name
+
+    df["Short Model"] = df["model"].apply(_get_short_name)
+    return df
 
 
 def _read_dwash20260217_file_raw(filepath: str) -> List[Dict[str, Any]]:

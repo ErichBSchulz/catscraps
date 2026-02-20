@@ -1,7 +1,7 @@
 import matplotlib.pyplot as plt
 import numpy as np
 from typing import List, Tuple
-from .models import BenchmarkData
+import pandas as pd
 
 # Tableau 10 color palette for a professional look
 COLORS = [
@@ -18,74 +18,72 @@ COLORS = [
 ]
 
 
-def _get_data(
-    benchmark_data_list: List[BenchmarkData],
-) -> Tuple[List[str], List[List[float]], List[List[float]], List[List[float]]]:
-    """Extracts model names and metrics across all runs."""
-    model_names = []
-    for bd in benchmark_data_list:
-        for name in bd.get_model_names():
-            if name not in model_names:
-                model_names.append(name)
-
-    all_p1, all_p2, all_costs = [], [], []
-    for bd in benchmark_data_list:
-        p1, p2, costs = [], [], []
-        for name in model_names:
-            try:
-                res = bd.get_model_result(name)
-                if res.pass_rates:
-                    p1.append(res.pass_rates[0])
-                    p2.append(res.pass_rates[-1])
-                else:
-                    p1.append(0.0)
-                    p2.append(0.0)
-                costs.append(res.total_cost)
-            except KeyError:
-                p1.append(0.0)
-                p2.append(0.0)
-                costs.append(0.0)
-        all_p1.append(p1)
-        all_p2.append(p2)
-        all_costs.append(costs)
-    return model_names, all_p1, all_p2, all_costs
-
-
 def create_plot(
-    benchmark_data_list: List[BenchmarkData],
+    df: pd.DataFrame,
     show_cost: bool = True,
     output_file: str = "benchmark_graph.png",
     plot_type: str = "A",
 ) -> None:
-    """Create a visualization of benchmark results."""
-    if not benchmark_data_list:
+    """Create a visualization from a pandas DataFrame."""
+    if df.empty:
         return
-    model_names, all_p1, all_p2, all_costs = _get_data(benchmark_data_list)
-    if plot_type == "B":
-        _create_plot_b(
-            benchmark_data_list, model_names, all_p1, all_p2, all_costs, output_file
-        )
+
+    # Determine Runs
+    if "File" in df.columns:
+        runs = df["File"].unique()
     else:
-        _create_plot_a(
-            benchmark_data_list,
-            model_names,
-            all_p1,
-            all_p2,
-            all_costs,
-            show_cost,
-            output_file,
+        runs = ["Aggregated"]
+        df["File"] = "Aggregated"
+
+    if "Short Model" not in df.columns:
+        # Fallback if logic wasn't applied or column missing
+        df["Short Model"] = df.get("model", "Unknown")
+
+    model_names = sorted(df["Short Model"].dropna().unique().tolist())
+
+    all_p1 = []
+    all_p2 = []
+    all_costs = []
+
+    for run in runs:
+        run_df = df[df["File"] == run]
+        p1_list = []
+        p2_list = []
+        cost_list = []
+
+        for m in model_names:
+            row = run_df[run_df["Short Model"] == m]
+            if not row.empty:
+                r = row.iloc[0]
+                p1_list.append(r.get("pass_rate_1", 0.0))
+                p2_list.append(r.get("pass_rate_2", 0.0))
+                cost_list.append(r.get("total_cost", 0.0))
+            else:
+                p1_list.append(0.0)
+                p2_list.append(0.0)
+                cost_list.append(0.0)
+
+        all_p1.append(p1_list)
+        all_p2.append(p2_list)
+        all_costs.append(cost_list)
+
+    if plot_type == "B":
+        _create_plot_b_arrays(runs, model_names, all_p1, all_p2, all_costs, output_file)
+    else:
+        _create_plot_a_arrays(
+            runs, model_names, all_p1, all_p2, all_costs, show_cost, output_file
         )
 
 
-def _create_plot_a(
-    benchmark_data_list, model_names, all_p1, all_p2, all_costs, show_cost, output_file
+def _create_plot_a_arrays(
+    run_names, model_names, all_p1, all_p2, all_costs, show_cost, output_file
 ):
-    num_runs = len(benchmark_data_list)
+    num_runs = len(run_names)
     fig, ax = plt.subplots(figsize=(12, max(5, len(model_names) * 0.7)))
     y_pos = np.arange(len(model_names))
     bar_height = 0.8 / num_runs
 
-    for i, bd in enumerate(benchmark_data_list):
+    for i, run_name in enumerate(run_names):
         offset = (i - (num_runs - 1) / 2) * bar_height
         widths = [all_p2[i][j] - all_p1[i][j] for j in range(len(model_names))]
         bars = ax.barh(
@@ -93,7 +91,7 @@ def _create_plot_a(
             widths,
             bar_height,
             left=all_p1[i],
-            label=bd.run_name,
+            label=run_name,
             color=COLORS[i % len(COLORS)],
             edgecolor="white",
             linewidth=0.5,
@@ -124,12 +122,10 @@ def _create_plot_a(
     plt.close()
 
 
-def _create_plot_b(
-    benchmark_data_list, model_names, all_p1, all_p2, all_costs, output_file
+def _create_plot_b_arrays(
+    run_names, model_names, all_p1, all_p2, all_costs, output_file
 ):
     fig, ax = plt.subplots(figsize=(10, 7))
-
-    # Add Best/Worst markers
     ax.text(
         0.05,
         0.95,
@@ -155,16 +151,15 @@ def _create_plot_b(
         fontweight="bold",
     )
 
-    for i, bd in enumerate(benchmark_data_list):
+    for i, run_name in enumerate(run_names):
         color = COLORS[i % len(COLORS)]
         for j, name in enumerate(model_names):
             p1, p2, cost = all_p1[i][j], all_p2[i][j], all_costs[i][j]
             if cost <= 0:
                 continue
 
+            # name is already "Short Model" from the DataFrame logic
             display_name = name
-            if len(name) > 10 and "-" in name:
-                display_name = "-".join(name.split("-")[1:])
 
             ax.hlines(cost, p1, p2, colors=color, linewidth=6, alpha=0.6)
             ax.plot([p1, p2], [cost, cost], "|", color=color, markersize=8)
@@ -185,8 +180,8 @@ def _create_plot_b(
     from matplotlib.lines import Line2D
 
     handles = [
-        Line2D([0], [0], color=COLORS[i % len(COLORS)], lw=4, label=bd.run_name)
-        for i, bd in enumerate(benchmark_data_list)
+        Line2D([0], [0], color=COLORS[i % len(COLORS)], lw=4, label=run_name)
+        for i, run_name in enumerate(run_names)
     ]
     ax.legend(handles=handles)
     plt.tight_layout()
