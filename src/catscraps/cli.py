@@ -422,6 +422,19 @@ def describe(
     description = df.describe()
     console.print(description.to_string())
 
+    if verbose > 0:
+        console.print("\n[bold]Dataframe Info:[/bold]")
+        import io
+
+        buffer = io.StringIO()
+        df.info(buf=buffer)
+        console.print(buffer.getvalue())
+
+        console.print(f"\n[bold]Shape:[/bold] {df.shape}")
+
+        console.print("\n[bold]Data Types:[/bold]")
+        console.print(df.dtypes.to_string())
+
 
 @app.command()
 def version(
