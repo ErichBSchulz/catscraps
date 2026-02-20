@@ -54,11 +54,21 @@ def load_benchmarks(files: List[Path]) -> List[Dict[str, Any]]:
             for res in bd.results:
                 p1 = res.pass_rates[0] if len(res.pass_rates) > 0 else 0.0
                 p2 = res.pass_rates[1] if len(res.pass_rates) > 1 else p1
-                short_name = res.name.split("/")[-1] if "/" in res.name else res.name
+
+                # Use a temporary RunMetadata to reuse the short_name logic safely
+                # This ensures consistency with the model logic defined in RunMetadata
+                temp_meta = RunMetadata(
+                    results_dir="",
+                    test_cases=0,
+                    model=res.name,
+                    edit_format="",
+                    commit_hash="",
+                )
+
                 row = {
                     "File": filepath.name,
                     "Model": res.name,
-                    "_Short Model": short_name,
+                    "_Short Model": temp_meta.short_name,
                     "Pass 1": p1,
                     "Pass 2": p2,
                     "Cost/Case": res.total_cost,
