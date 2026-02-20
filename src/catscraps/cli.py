@@ -11,6 +11,8 @@ from pathlib import Path
 from rich.table import Table
 from catscraps.reader import read_file, load_benchmarks
 from catscraps.plotter import create_plot
+from catscraps.grouper import group_and_aggregate
+from catscraps.models import BenchmarkData, ModelResult
 
 # Configure logger
 logging.basicConfig(
@@ -37,6 +39,12 @@ def configure_logging(verbose: int, quiet: bool):
         logger.setLevel(logging.WARNING)
 
 
+def parse_group_by(ctx, param, value):
+    if value:
+        return [x.strip() for x in value.split(",")]
+    return None
+
+
 @app.callback()
 def main(
     verbose: int = typer.Option(
@@ -59,6 +67,13 @@ def main(
 @app.command()
 def table(
     files: list[Path] = typer.Argument(None, help="List of benchmark files to display"),
+    group_by: str = typer.Option(
+        "Model,Edit Format,Commit",
+        "--group-by",
+        "-g",
+        help="Comma separated fields to group by",
+        callback=parse_group_by,
+    ),
 ):
     """Display benchmark data in a table."""
     if not files:
@@ -84,6 +99,9 @@ def table(
         console.print(f"[red]Error loading benchmarks: {e}[/red]")
         raise typer.Exit(1)
 
+    if group_by:
+        data = group_and_aggregate(data, group_by)
+
     if not data:
         console.print("[yellow]No data found.[/yellow]")
         return
@@ -93,19 +111,19 @@ def table(
     # Define columns to display, substituting Model for _Short Model
     raw_cols = list(data[0].keys())
 
-    # Determine display columns order
-    display_cols = [c for c in raw_cols if not c.startswith("_")]
+    # Prioritize group_by columns if set, otherwise standard order
+    ordered_cols = []
+    if group_by:
+        ordered_cols = [c for c in group_by if c in raw_cols]
 
-    # Force specific order for common columns
-    ordered_cols = ["File", "Model"]
-    if "Edit Format" in display_cols:
-        ordered_cols.append("Edit Format")
-    if "Commit" in display_cols:
-        ordered_cols.append("Commit")
-    if "N" in display_cols:
-        ordered_cols.append("N")
+    # Add standard columns if they aren't in group_by
+    for std in ["File", "Model", "Edit Format", "Commit", "N"]:
+        if std not in ordered_cols and std in raw_cols:
+            ordered_cols.append(std)
 
-    remaining = [c for c in display_cols if c not in ordered_cols]
+    remaining = [
+        c for c in raw_cols if c not in ordered_cols and not c.startswith("_")
+    ]
     display_cols = ordered_cols + remaining
 
     for col in display_cols:
@@ -161,6 +179,13 @@ def plot(
     output: str = typer.Option(
         "benchmark_graph.png", "--output", "-f", help="Output file name"
     ),
+    group_by: str = typer.Option(
+        None,
+        "--group-by",
+        "-g",
+        help="Comma separated fields to group by. Aggregates data if set.",
+        callback=parse_group_by,
+    ),
 ):
     """
     Create a visualization of benchmark results.
@@ -187,26 +212,59 @@ def plot(
     # Read all benchmark files
     benchmark_data_list = []
 
-    with Progress(
-        SpinnerColumn(),
-        TextColumn("[progress.description]{task.description}"),
-        console=console,
-    ) as progress:
-        task = progress.add_task("Reading benchmark files...", total=len(all_files))
+    if group_by:
+        # Load all flattened data
+        try:
+            flat_data = load_benchmarks(all_files)
+        except Exception as e:
+            console.print(f"[red]Error loading benchmarks: {e}[/red]")
+            raise typer.Exit(1)
 
-        for filepath in all_files:
-            run_name = filepath.stem.replace("_", " ")
-            if not filepath.exists():
-                console.print(f"[red]Error: File '{filepath}' not found[/red]")
-                raise typer.Exit(1)
+        grouped_data = group_and_aggregate(flat_data, group_by)
 
-            try:
-                benchmark_data = read_file(str(filepath), run_name, format=input_format)
-                benchmark_data_list.append(benchmark_data)
-                progress.update(task, advance=1, description=f"Read {filepath}")
-            except Exception as e:
-                console.print(f"[red]Error reading {filepath}: {e}[/red]")
-                raise typer.Exit(1)
+        # Convert to single BenchmarkData object
+        results = []
+        for row in grouped_data:
+            # Construct a display name from group keys
+            name_parts = [str(row.get(g, "")) for g in group_by]
+            m_name = " ".join(name_parts)
+
+            p1 = row.get("Pass 1", 0.0) or 0.0
+            p2 = row.get("Pass 2", 0.0) or 0.0
+            cost = row.get("Cost/Case", 0.0) or 0.0
+
+            results.append(
+                ModelResult(name=m_name, pass_rates=[p1, p2], total_cost=cost)
+            )
+
+        if results:
+            benchmark_data_list.append(
+                BenchmarkData(run_name="Aggregated", results=results)
+            )
+
+    else:
+        with Progress(
+            SpinnerColumn(),
+            TextColumn("[progress.description]{task.description}"),
+            console=console,
+        ) as progress:
+            task = progress.add_task("Reading benchmark files...", total=len(all_files))
+
+            for filepath in all_files:
+                run_name = filepath.stem.replace("_", " ")
+                if not filepath.exists():
+                    console.print(f"[red]Error: File '{filepath}' not found[/red]")
+                    raise typer.Exit(1)
+
+                try:
+                    benchmark_data = read_file(
+                        str(filepath), run_name, format=input_format
+                    )
+                    benchmark_data_list.append(benchmark_data)
+                    progress.update(task, advance=1, description=f"Read {filepath}")
+                except Exception as e:
+                    console.print(f"[red]Error reading {filepath}: {e}[/red]")
+                    raise typer.Exit(1)
 
     # Create the plot
     with console.status("[bold green]Creating plot...") as status:
