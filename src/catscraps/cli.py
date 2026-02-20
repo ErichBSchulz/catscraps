@@ -59,7 +59,7 @@ def main():
 def table(
     files: list[Path] = typer.Argument(None, help="List of benchmark files to display"),
     group_by: str = typer.Option(
-        "Model,Edit Format,Commit",
+        None,
         "--group-by",
         "-g",
         help="Comma separated fields to group by. Use 'default' for standard grouping.",
