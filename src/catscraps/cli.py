@@ -41,6 +41,8 @@ def configure_logging(verbose: int, quiet: bool):
 
 def parse_group_by(ctx, param, value):
     if value:
+        if value.strip().lower() == "default":
+            return ["Model", "Edit Format", "Commit"]
         return [x.strip() for x in value.split(",")]
     return None
 
@@ -71,7 +73,7 @@ def table(
         "Model,Edit Format,Commit",
         "--group-by",
         "-g",
-        help="Comma separated fields to group by",
+        help="Comma separated fields to group by. Use 'default' for standard grouping.",
         callback=parse_group_by,
     ),
 ):
