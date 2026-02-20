@@ -385,9 +385,7 @@ def plot(
 
 @app.command()
 def info(
-    files: list[Path] = typer.Argument(
-        None, help="List of benchmark files to analyze"
-    ),
+    files: list[Path] = typer.Argument(None, help="List of benchmark files to analyze"),
     verbose: int = typer.Option(
         0,
         "--verbose",
