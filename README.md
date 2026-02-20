@@ -4,8 +4,7 @@ A tool for visualizing and analyzing benchmark results.
 
 ## Features
 
-- **Multi-format Support**: Loads data from legacy `dwash`
-  text files and modern YAML formats.
+- **Multi-format Support**: Loads data from different YAML formats. 
 - **Flexible Loading**: Accepts multiple files or globs
   (handled by your shell).
 - **Data Analysis**:
