@@ -1,8 +1,11 @@
 import re
 import yaml
+import logging
 from typing import List, Dict, Any, Union
 from pathlib import Path
 from .models import BenchmarkData, ModelResult, BenchmarkRun, RunMetadata, RunOutcomes
+
+logger = logging.getLogger(__name__)
 
 
 def load_benchmarks(files: List[Path]) -> List[Dict[str, Any]]:
@@ -12,6 +15,10 @@ def load_benchmarks(files: List[Path]) -> List[Dict[str, Any]]:
     all_data = []
 
     for filepath in files:
+        # Skip meta files if they are passed directly
+        if filepath.name.endswith("_meta.yml"):
+            continue
+
         if filepath.suffix in [".yml", ".yaml"]:
             runs = _read_classic_file(str(filepath))
             for run in runs:
@@ -27,12 +34,23 @@ def load_benchmarks(files: List[Path]) -> List[Dict[str, Any]]:
                         + run.outcomes.mean_completion_tokens
                     ),
                     "Sec/Case": run.outcomes.seconds_per_case,
+                    "Edit Format": run.metadata.edit_format,
+                    "Commit": run.metadata.commit_hash,
+                    "N": run.metadata.test_cases,
                 }
                 all_data.append(row)
         else:
             # dwash format
             run_name = filepath.stem.replace("_", " ")
             bd = _read_dwash20260217_file(str(filepath), run_name)
+
+            # Look for sidecar metadata
+            meta_path = filepath.with_name(filepath.name + "_meta.yml")
+            meta_dict = {}
+            if meta_path.exists():
+                with open(meta_path, "r") as f:
+                    meta_dict = yaml.safe_load(f) or {}
+
             for res in bd.results:
                 p1 = res.pass_rates[0] if len(res.pass_rates) > 0 else 0.0
                 p2 = res.pass_rates[1] if len(res.pass_rates) > 1 else p1
@@ -46,6 +64,9 @@ def load_benchmarks(files: List[Path]) -> List[Dict[str, Any]]:
                     "Cost/Case": res.total_cost,
                     "Tok/Case": None,
                     "Sec/Case": None,
+                    "Edit Format": meta_dict.get("edit_format", "N/A"),
+                    "Commit": meta_dict.get("commit_hash", "N/A"),
+                    "N": meta_dict.get("test_cases", "N/A"),
                 }
                 all_data.append(row)
 
@@ -89,8 +110,22 @@ def _read_classic_file(filepath: str) -> List[BenchmarkRun]:
     if not isinstance(data, list):
         data = [data]
 
+    # Look for sidecar metadata
+    path_obj = Path(filepath)
+    meta_path = path_obj.with_name(path_obj.name + "_meta.yml")
+    sidecar_meta = {}
+    if meta_path.exists():
+        with open(meta_path, "r") as f:
+            sidecar_meta = yaml.safe_load(f) or {}
+
     runs = []
     for entry in data:
+        # Apply sidecar overrides to the raw entry dictionary before validation
+        for key, value in sidecar_meta.items():
+            if key in entry and entry[key] != value:
+                logger.debug("Overwriting %s in %s", key, filepath)
+            entry[key] = value
+
         # Split entry into metadata and outcomes based on known fields
         # This is a bit manual but ensures strict separation
 

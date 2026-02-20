@@ -92,14 +92,27 @@ def table(
 
     # Define columns to display, substituting Model for _Short Model
     raw_cols = list(data[0].keys())
+
+    # Determine display columns order
     display_cols = [c for c in raw_cols if not c.startswith("_")]
-    if "_Short Model" in raw_cols:
-        display_cols = ["File", "Model"] + [
-            c for c in display_cols if c not in ["File", "Model"]
-        ]
+
+    # Force specific order for common columns
+    ordered_cols = ["File", "Model"]
+    if "Edit Format" in display_cols:
+        ordered_cols.append("Edit Format")
+    if "Commit" in display_cols:
+        ordered_cols.append("Commit")
+    if "N" in display_cols:
+        ordered_cols.append("N")
+
+    remaining = [c for c in display_cols if c not in ordered_cols]
+    display_cols = ordered_cols + remaining
 
     for col in display_cols:
-        justify = "right" if col not in ["File", "Model"] else "left"
+        justify = "right"
+        if col in ["File", "Model", "Edit Format", "Commit"]:
+            justify = "left"
+
         style = "dim" if col == "File" else ("cyan" if col == "Model" else None)
         table.add_column(col, justify=justify, style=style)
 
