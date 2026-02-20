@@ -384,9 +384,9 @@ def plot(
 
 
 @app.command()
-def describe(
+def info(
     files: list[Path] = typer.Argument(
-        None, help="List of benchmark files to describe"
+        None, help="List of benchmark files to analyze"
     ),
     verbose: int = typer.Option(
         0,
@@ -400,7 +400,7 @@ def describe(
     ),
 ):
     """
-    Show standard pandas description of the unified dataset.
+    Show standard pandas info and structure of the unified dataset.
     """
     configure_logging(verbose, quiet)
 
@@ -418,22 +418,24 @@ def describe(
         console.print("[yellow]No data found.[/yellow]")
         return
 
-    # Standard pandas describe
-    description = df.describe()
-    console.print(description.to_string())
+    # Primary Output: Info, Shape, Dtypes
+    console.print("\n[bold]Dataframe Info:[/bold]")
+    import io
 
+    buffer = io.StringIO()
+    df.info(buf=buffer)
+    console.print(buffer.getvalue())
+
+    console.print(f"\n[bold]Shape:[/bold] {df.shape}")
+
+    console.print("\n[bold]Data Types:[/bold]")
+    console.print(df.dtypes.to_string())
+
+    # Verbose Output: Describe
     if verbose > 0:
-        console.print("\n[bold]Dataframe Info:[/bold]")
-        import io
-
-        buffer = io.StringIO()
-        df.info(buf=buffer)
-        console.print(buffer.getvalue())
-
-        console.print(f"\n[bold]Shape:[/bold] {df.shape}")
-
-        console.print("\n[bold]Data Types:[/bold]")
-        console.print(df.dtypes.to_string())
+        console.print("\n[bold]Statistical Description:[/bold]")
+        description = df.describe()
+        console.print(description.to_string())
 
 
 @app.command()
