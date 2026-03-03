@@ -118,6 +118,32 @@ def load_benchmarks(files: List[Path], query: str = None) -> pd.DataFrame:
                 row["seconds_per_case"] = row["avg_duration"]
                 del row["avg_duration"]
 
+            # Coerce pass_rate_1 and pass_rate_2 to numeric values
+            for pass_field in ["pass_rate_1", "pass_rate_2"]:
+                if pass_field in row:
+                    try:
+                        # Convert to float, handling None, empty strings, etc.
+                        val = row[pass_field]
+                        if val is None:
+                            row[pass_field] = None
+                        elif isinstance(val, str):
+                            # Remove any trailing % signs
+                            cleaned = val.strip().rstrip("%")
+                            if cleaned:
+                                row[pass_field] = float(cleaned)
+                            else:
+                                row[pass_field] = None
+                        else:
+                            # Try to convert directly
+                            row[pass_field] = float(val)
+                    except (ValueError, TypeError):
+                        logger.warning(
+                            "Could not convert %s value %s to float",
+                            pass_field,
+                            row[pass_field],
+                        )
+                        row[pass_field] = None
+
             # Ensure n is set for later use
             if n_val is not None:
                 row["n"] = n_val
