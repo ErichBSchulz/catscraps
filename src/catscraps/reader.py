@@ -64,6 +64,42 @@ def load_benchmarks(files: List[Path], query: str = None) -> pd.DataFrame:
                 for k, v in sidecar_meta.items():
                     row[k] = v
 
+        # Process each row to handle avg_cost and avg_duration
+        for row in file_rows:
+            # Determine n from available fields
+            n_val = None
+            if 'n' in row:
+                n_val = row['n']
+            elif 'test_cases' in row:
+                n_val = row['test_cases']
+            elif 'total_tests' in row:
+                n_val = row['total_tests']
+            
+            # Convert avg_cost to total_cost if present
+            if 'avg_cost' in row:
+                avg_cost = row['avg_cost']
+                if n_val is not None:
+                    try:
+                        row['total_cost'] = float(avg_cost) * float(n_val)
+                    except (ValueError, TypeError):
+                        # If conversion fails, set to 0.0 and log a warning
+                        logger.warning("Could not convert avg_cost %s or n %s to float", avg_cost, n_val)
+                        row['total_cost'] = 0.0
+                else:
+                    logger.warning("avg_cost present but n not found in row, cannot compute total_cost")
+                    row['total_cost'] = 0.0
+                # Remove avg_cost to avoid confusion
+                del row['avg_cost']
+            
+            # Map avg_duration to seconds_per_case if present
+            if 'avg_duration' in row:
+                row['seconds_per_case'] = row['avg_duration']
+                del row['avg_duration']
+            
+            # Ensure n is set for later use
+            if n_val is not None:
+                row['n'] = n_val
+        
         all_rows.extend(file_rows)
 
     if not all_rows:
