@@ -25,7 +25,7 @@ def load_benchmarks(files: List[Path], query: str = None) -> pd.DataFrame:
             # Classic format
             with open(filepath, "r") as f:
                 data = yaml.safe_load(f)
-            
+
             # Handle dictionary of dictionaries format
             if isinstance(data, dict):
                 # Convert to list of dictionaries, adding the key as a field
