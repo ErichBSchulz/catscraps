@@ -79,11 +79,13 @@ def load_benchmarks(files: List[Path], query: str = None) -> pd.DataFrame:
                 n_val = row["total_tests"]
 
             # Check if model is present
-            model_present = "model" in row and row["model"] is not None and row["model"] != ""
-            
+            model_present = (
+                "model" in row and row["model"] is not None and row["model"] != ""
+            )
+
             # Check if n can be determined
             n_determined = n_val is not None and n_val != "" and n_val != 0
-            
+
             # If either model or n is missing, exclude this row
             if not model_present or not n_determined:
                 excluded_count += 1
@@ -121,13 +123,12 @@ def load_benchmarks(files: List[Path], query: str = None) -> pd.DataFrame:
                 row["n"] = n_val
 
             processed_rows.append(row)
-        
+
         all_rows.extend(processed_rows)
 
     if excluded_count > 0:
         logger.warning(
-            "Excluded %d row(s) that lacked either 'model' or 'n'",
-            excluded_count
+            "Excluded %d row(s) that lacked either 'model' or 'n'", excluded_count
         )
 
     if not all_rows:
