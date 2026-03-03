@@ -14,6 +14,7 @@ def load_benchmarks(files: List[Path], query: str = None) -> pd.DataFrame:
     Load benchmark data from multiple files into a unified pandas DataFrame.
     """
     all_rows = []
+    excluded_count = 0
 
     for filepath in files:
         # Skip meta files if they are passed directly
@@ -65,6 +66,8 @@ def load_benchmarks(files: List[Path], query: str = None) -> pd.DataFrame:
                     row[k] = v
 
         # Process each row to handle avg_cost and avg_duration
+        # and filter rows that lack model or n
+        processed_rows = []
         for row in file_rows:
             # Determine n from available fields
             n_val = None
@@ -74,6 +77,17 @@ def load_benchmarks(files: List[Path], query: str = None) -> pd.DataFrame:
                 n_val = row["test_cases"]
             elif "total_tests" in row:
                 n_val = row["total_tests"]
+
+            # Check if model is present
+            model_present = "model" in row and row["model"] is not None and row["model"] != ""
+            
+            # Check if n can be determined
+            n_determined = n_val is not None and n_val != "" and n_val != 0
+            
+            # If either model or n is missing, exclude this row
+            if not model_present or not n_determined:
+                excluded_count += 1
+                continue
 
             # Convert avg_cost to total_cost if present
             if "avg_cost" in row:
@@ -106,7 +120,15 @@ def load_benchmarks(files: List[Path], query: str = None) -> pd.DataFrame:
             if n_val is not None:
                 row["n"] = n_val
 
-        all_rows.extend(file_rows)
+            processed_rows.append(row)
+        
+        all_rows.extend(processed_rows)
+
+    if excluded_count > 0:
+        logger.warning(
+            "Excluded %d row(s) that lacked either 'model' or 'n'",
+            excluded_count
+        )
 
     if not all_rows:
         return pd.DataFrame()
