@@ -25,7 +25,23 @@ def load_benchmarks(files: List[Path], query: str = None) -> pd.DataFrame:
             # Classic format
             with open(filepath, "r") as f:
                 data = yaml.safe_load(f)
-            if not isinstance(data, list):
+            
+            # Handle dictionary of dictionaries format
+            if isinstance(data, dict):
+                # Convert to list of dictionaries, adding the key as a field
+                converted_data = []
+                for key, value in data.items():
+                    if isinstance(value, dict):
+                        # Add the key as a field
+                        entry = value.copy()
+                        entry["key"] = key
+                        converted_data.append(entry)
+                    else:
+                        # If value is not a dict, still add it as a field
+                        entry = {"value": value, "key": key}
+                        converted_data.append(entry)
+                data = converted_data
+            elif not isinstance(data, list):
                 data = [data]
 
             for entry in data:
