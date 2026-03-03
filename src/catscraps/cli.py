@@ -182,10 +182,12 @@ def table(
     if extras:
         # Expand glob patterns against available columns
         expanded_extras = expand_column_globs(list(df.columns), extras)
-        
+
         # Validate which columns exist
-        existing_extras, missing_extras = validate_columns_exist(list(df.columns), expanded_extras)
-        
+        existing_extras, missing_extras = validate_columns_exist(
+            list(df.columns), expanded_extras
+        )
+
         if missing_extras:
             # Get all available columns for error message
             all_columns = sorted(list(df.columns))
@@ -197,10 +199,12 @@ def table(
             col_width = max(len(col) for col in all_columns) + 2
             cols_per_line = 4
             for i in range(0, len(all_columns), cols_per_line):
-                line_cols = all_columns[i:i + cols_per_line]
-                console.print("  " + "".join(f"{col:<{col_width}}" for col in line_cols))
+                line_cols = all_columns[i : i + cols_per_line]
+                console.print(
+                    "  " + "".join(f"{col:<{col_width}}" for col in line_cols)
+                )
             raise typer.Exit(1)
-        
+
         extra_display_cols = existing_extras
 
     # Prepare Table
