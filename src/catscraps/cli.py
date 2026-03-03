@@ -14,6 +14,7 @@ from catscraps.reader import read_file, load_benchmarks
 from catscraps.plotter import create_plot
 from catscraps.models import BenchmarkData, ModelResult
 from catscraps.stats import get_ci
+from catscraps.panda_utils import expand_column_globs, validate_columns_exist
 
 # Configure logger
 logging.basicConfig(
@@ -48,6 +49,14 @@ def parse_group_by(ctx, param, value):
     return None
 
 
+def parse_extras_csv(ctx, param, value):
+    """Parse CSV string of extra columns into a list."""
+    if value:
+        # Split by comma, strip whitespace, filter empty strings
+        return [col.strip() for col in value.split(",") if col.strip()]
+    return None
+
+
 @app.callback()
 def main():
     """
@@ -71,6 +80,13 @@ def table(
         "-g",
         help="Comma separated fields to group by. Use 'default' for standard grouping.",
         callback=parse_group_by,
+    ),
+    extras: str = typer.Option(
+        None,
+        "--extras",
+        "-x",
+        help="Comma-separated list of extra columns to display. Supports glob patterns (*, ?, []).",
+        callback=parse_extras_csv,
     ),
     show_ci: bool = typer.Option(
         False, "--show-ci", help="Display confidence intervals for pass rates"
@@ -161,11 +177,34 @@ def table(
             agg_rules = {k: v for k, v in agg_rules.items() if k in df.columns}
             df = df.groupby(valid_groups, as_index=False).agg(agg_rules)
 
+    # Handle extra columns
+    extra_display_cols = []
+    if extras:
+        # Expand glob patterns against available columns
+        expanded_extras = expand_column_globs(list(df.columns), extras)
+        
+        # Validate which columns exist
+        existing_extras, missing_extras = validate_columns_exist(list(df.columns), expanded_extras)
+        
+        if missing_extras:
+            # Get all available columns for error message
+            all_columns = sorted(list(df.columns))
+            console.print(f"[red]Error: The following columns were not found:[/red]")
+            for missing in missing_extras:
+                console.print(f"  [red]{missing}[/red]")
+            console.print(f"\n[yellow]Available columns:[/yellow]")
+            # Display in columns for readability
+            col_width = max(len(col) for col in all_columns) + 2
+            cols_per_line = 4
+            for i in range(0, len(all_columns), cols_per_line):
+                line_cols = all_columns[i:i + cols_per_line]
+                console.print("  " + "".join(f"{col:<{col_width}}" for col in line_cols))
+            raise typer.Exit(1)
+        
+        extra_display_cols = existing_extras
+
     # Prepare Table
     table = Table(title="Benchmark Results")
-
-    # Columns to display: Groups first, then standard metrics
-    display_cols = []
 
     # Priority columns
     std_cols = [
@@ -193,6 +232,11 @@ def table(
         if c in df.columns and c not in display_cols:
             display_cols.append(c)
 
+    # Add extra columns at the end
+    for extra in extra_display_cols:
+        if extra not in display_cols:
+            display_cols.append(extra)
+
     for col in display_cols:
         justify = "right"
         if col in ["File", "Model", "Edit Format", "Commit"]:
@@ -211,31 +255,6 @@ def table(
             elif col.startswith("Pass"):
                 try:
                     val_float = float(val)
-                    # Detect if we have percentage (0-100) or rate (0-1) based on scale,
-                    # though usually pass_rate_* is 0-100 in dwash files, but 0-1 in models?
-                    # Looking at reader.py:
-                    # dwash regex finds [\d.]+ ... usually these are 0.123 (0-1).
-                    # classic files pass_rates could be anything.
-                    # CLI formatting previously used {float(val):.1f}%, suggesting val was 0-100?
-                    # Wait, previous code: formatted_row.append(f"{float(val):.1f}%")
-                    # If val is 0.75, it prints "0.8%". That seems wrong if it's a rate.
-                    # If val is 75.0, it prints "75.0%".
-                    # Let's assume input is percentage (0-100) if > 1.0, else rate (0-1).
-                    # But wait, 0.8% is valid.
-                    # Let's standardize on display being 0-100.
-
-                    # Let's assume raw data is 0-100 based on previous CLI output behavior
-                    # OR fix it if it looks like 0-1.
-                    # Actually, let's look at reader.py:
-                    # pass_rates = [float(m) for m in re.findall(r"pass_rate_\d+:\s+([\d.]+)", body)]
-                    # If file has 0.123, it is 0.123.
-                    # Previous CLI: f"{float(val):.1f}%" -> 0.1% if 0.123.
-                    # This suggests existing CLI might have been printing very small percentages if data was 0-1?
-                    # The test mock in test_cli.py has "pass_rate_1: 0.5".
-                    # The reader returns 0.5.
-                    # The CLI prints "0.5%". That seems like a bug in existing CLI if 0.5 meant 50%.
-                    # But I should stick to the requested changes which handle this explicitly now.
-
                     display_val = val_float
                     if val_float <= 1.0 and val_float > 0:
                         # Likely a rate 0-1, convert to %
@@ -261,7 +280,20 @@ def table(
             elif col == "N":
                 formatted_row.append(str(int(val)))
             else:
-                formatted_row.append(str(val))
+                # Generic formatting for extra columns
+                # Try to format numbers nicely, otherwise string representation
+                try:
+                    if isinstance(val, (int, float)):
+                        # Check if it's an integer-like float
+                        if float(val).is_integer():
+                            formatted_row.append(str(int(val)))
+                        else:
+                            # Format floats with reasonable precision
+                            formatted_row.append(f"{float(val):.2f}")
+                    else:
+                        formatted_row.append(str(val))
+                except (ValueError, TypeError):
+                    formatted_row.append(str(val))
         table.add_row(*formatted_row)
 
     console.print(table)
