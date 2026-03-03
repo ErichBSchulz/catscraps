@@ -1,0 +1,5 @@
+edit_format: "diff"
+map_tokens: "512"
+languages: "javascript,python,rust,go,java"
+hash_re: "^.[15ef]"
+num_tests: "72"
