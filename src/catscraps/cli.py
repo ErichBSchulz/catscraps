@@ -16,6 +16,24 @@ from catscraps.models import BenchmarkData, ModelResult
 from catscraps.stats import get_ci
 from catscraps.panda_utils import expand_column_globs, validate_columns_exist
 
+
+def _agg_text_values(series):
+    """Aggregate text values by counting occurrences."""
+    # Count occurrences of each value
+    value_counts = series.value_counts()
+    if len(value_counts) == 1:
+        # Single value, just return it
+        return series.iloc[0]
+    else:
+        # Multiple values, format as "val1 (count), val2 (count)"
+        formatted = []
+        for val, count in value_counts.items():
+            if pd.isna(val):
+                formatted.append(f"null ({count})")
+            else:
+                formatted.append(f"{val} ({count})")
+        return ", ".join(formatted)
+
 # Configure logger
 logging.basicConfig(
     level=logging.WARNING,
@@ -175,6 +193,17 @@ def table(
                 "n": "sum",
             }
             agg_rules = {k: v for k, v in agg_rules.items() if k in df.columns}
+            
+            # Add aggregation rules for extra columns
+            for extra_col in extra_display_cols:
+                if extra_col in df.columns and extra_col not in agg_rules:
+                    # Check if column is numeric
+                    if pd.api.types.is_numeric_dtype(df[extra_col]):
+                        agg_rules[extra_col] = "mean"
+                    else:
+                        # For text columns, use custom aggregation
+                        agg_rules[extra_col] = _agg_text_values
+            
             df = df.groupby(valid_groups, as_index=False).agg(agg_rules)
 
     # Handle extra columns
