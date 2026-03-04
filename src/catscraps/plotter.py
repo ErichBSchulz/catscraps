@@ -135,7 +135,7 @@ def _create_plot_a_arrays(
                     # Position diamond according to its actual value
                     # No longer clipping to bar bounds
                     diamond_x = diamond_val
-                    
+
                     # Add diamond marker
                     ax.plot(
                         diamond_x,
