@@ -23,6 +23,7 @@ def create_plot(
     show_cost: bool = True,
     output_file: str = "benchmark_graph.png",
     plot_type: str = "A",
+    diamond_field: str = None,
 ) -> None:
     """Create a visualization from a pandas DataFrame."""
     if df.empty:
@@ -44,12 +45,14 @@ def create_plot(
     all_p1 = []
     all_p2 = []
     all_costs = []
+    all_diamonds = [] if diamond_field else None
 
     for run in runs:
         run_df = df[df["File"] == run]
         p1_list = []
         p2_list = []
         cost_list = []
+        diamond_list = [] if diamond_field else None
 
         for m in model_names:
             row = run_df[run_df["Short Model"] == m]
@@ -58,25 +61,36 @@ def create_plot(
                 p1_list.append(r.get("pass_rate_1", 0.0))
                 p2_list.append(r.get("pass_rate_2", 0.0))
                 cost_list.append(r.get("total_cost", 0.0))
+                if diamond_field and diamond_list is not None:
+                    diamond_val = r.get(diamond_field)
+                    # Convert to float if possible, otherwise use 0.0
+                    try:
+                        diamond_list.append(float(diamond_val) if diamond_val is not None else 0.0)
+                    except (ValueError, TypeError):
+                        diamond_list.append(0.0)
             else:
                 p1_list.append(0.0)
                 p2_list.append(0.0)
                 cost_list.append(0.0)
+                if diamond_field and diamond_list is not None:
+                    diamond_list.append(0.0)
 
         all_p1.append(p1_list)
         all_p2.append(p2_list)
         all_costs.append(cost_list)
+        if diamond_field and diamond_list is not None:
+            all_diamonds.append(diamond_list)
 
     if plot_type == "B":
         _create_plot_b_arrays(runs, model_names, all_p1, all_p2, all_costs, output_file)
     else:
         _create_plot_a_arrays(
-            runs, model_names, all_p1, all_p2, all_costs, show_cost, output_file
+            runs, model_names, all_p1, all_p2, all_costs, all_diamonds, show_cost, output_file
         )
 
 
 def _create_plot_a_arrays(
-    run_names, model_names, all_p1, all_p2, all_costs, show_cost, output_file
+    run_names, model_names, all_p1, all_p2, all_costs, all_diamonds, show_cost, output_file
 ):
     num_runs = len(run_names)
     fig, ax = plt.subplots(figsize=(12, max(5, len(model_names) * 0.7)))
@@ -96,6 +110,31 @@ def _create_plot_a_arrays(
             edgecolor="white",
             linewidth=0.5,
         )
+        
+        # Add diamond markers if diamond data is provided
+        if all_diamonds is not None and i < len(all_diamonds):
+            diamond_values = all_diamonds[i]
+            for j, (bar, diamond_val) in enumerate(zip(bars, diamond_values)):
+                if diamond_val > 0:
+                    # Calculate diamond position
+                    diamond_x = diamond_val
+                    # Ensure diamond is within bar bounds for visibility
+                    bar_left = bar.get_x()
+                    bar_right = bar.get_x() + bar.get_width()
+                    diamond_x_clipped = max(bar_left, min(diamond_x, bar_right))
+                    
+                    # Add diamond marker
+                    ax.plot(
+                        diamond_x_clipped,
+                        bar.get_y() + bar.get_height() / 2,
+                        marker='D',
+                        markersize=8,
+                        color='white',
+                        markeredgecolor='black',
+                        markeredgewidth=1,
+                        zorder=5  # Ensure diamonds are on top of bars
+                    )
+        
         if show_cost:
             for j, bar in enumerate(bars):
                 if all_costs[i][j] > 0:
@@ -111,7 +150,13 @@ def _create_plot_a_arrays(
     ax.set_yticks(y_pos)
     ax.set_yticklabels(model_names)
     ax.set_xlabel("Pass Rate (%)")
-    ax.set_title("Model Pass Rates: Range (Pass 1 to Pass 2)")
+    
+    # Update title to include diamond field info if present
+    title = "Model Pass Rates: Range (Pass 1 to Pass 2)"
+    if all_diamonds is not None:
+        title += " with diamond markers"
+    ax.set_title(title)
+    
     ax.set_xlim(0, 105)
     ax.grid(axis="x", linestyle="--", alpha=0.4)
     ax.legend(loc="upper right")

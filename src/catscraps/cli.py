@@ -364,6 +364,12 @@ def plot(
         help="Comma separated fields to group by. Aggregates data if set.",
         callback=parse_group_by,
     ),
+    diamond: str = typer.Option(
+        None,
+        "--diamond",
+        "-d",
+        help="Field to display as diamond markers on plot A bars",
+    ),
     verbose: int = typer.Option(
         0,
         "--verbose",
@@ -410,6 +416,12 @@ def plot(
         console.print("[red]No data found to plot[/red]")
         raise typer.Exit(1)
 
+    # Validate diamond field exists if specified
+    if diamond and diamond not in df.columns:
+        console.print(f"[red]Error: Diamond field '{diamond}' not found in data[/red]")
+        console.print(f"[yellow]Available columns: {sorted(list(df.columns))}[/yellow]")
+        raise typer.Exit(1)
+
     # Grouping logic for plot
     if group_by:
         valid_groups = [g for g in group_by if g in df.columns]
@@ -420,6 +432,10 @@ def plot(
                 "total_cost": "mean",
                 "Short Model": "first",
             }
+            # Include diamond field in aggregation if specified
+            if diamond and diamond in df.columns:
+                agg_rules[diamond] = "mean"
+            
             agg_rules = {k: v for k, v in agg_rules.items() if k in df.columns}
             df = df.groupby(valid_groups, as_index=False).agg(agg_rules)
 
@@ -440,6 +456,7 @@ def plot(
                 show_cost=show_cost,
                 output_file=output,
                 plot_type=plot_type,
+                diamond_field=diamond,
             )
             console.print(f"[green]✓ Graph saved to {output}[/green]")
         except Exception as e:
