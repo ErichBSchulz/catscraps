@@ -132,16 +132,13 @@ def _create_plot_a_arrays(
             diamond_values = all_diamonds[i]
             for j, (bar, diamond_val) in enumerate(zip(bars, diamond_values)):
                 if diamond_val > 0:
-                    # Calculate diamond position
+                    # Position diamond according to its actual value
+                    # No longer clipping to bar bounds
                     diamond_x = diamond_val
-                    # Ensure diamond is within bar bounds for visibility
-                    bar_left = bar.get_x()
-                    bar_right = bar.get_x() + bar.get_width()
-                    diamond_x_clipped = max(bar_left, min(diamond_x, bar_right))
-
+                    
                     # Add diamond marker
                     ax.plot(
-                        diamond_x_clipped,
+                        diamond_x,
                         bar.get_y() + bar.get_height() / 2,
                         marker="D",
                         markersize=8,
