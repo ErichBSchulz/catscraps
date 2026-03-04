@@ -95,6 +95,7 @@ def create_plot(
             all_diamonds,
             show_cost,
             output_file,
+            diamond_field,
         )
 
 
@@ -107,6 +108,7 @@ def _create_plot_a_arrays(
     all_diamonds,
     show_cost,
     output_file,
+    diamond_field=None,
 ):
     num_runs = len(run_names)
     fig, ax = plt.subplots(figsize=(12, max(5, len(model_names) * 0.7)))
@@ -167,7 +169,10 @@ def _create_plot_a_arrays(
     # Update title to include diamond field info if present
     title = "Model Pass Rates: Range (Pass 1 to Pass 2)"
     if all_diamonds is not None:
-        title += " with diamond markers"
+        if diamond_field:
+            title += f" with {diamond_field} diamond markers"
+        else:
+            title += " with diamond markers"
     ax.set_title(title)
 
     ax.set_xlim(0, 105)
