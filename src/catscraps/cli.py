@@ -183,30 +183,6 @@ def table(
         if src in df.columns and dst not in df.columns:
             df[dst] = df[src]
 
-    # Handle Grouping
-    if group_by:
-        valid_groups = [g for g in group_by if g in df.columns]
-        if valid_groups:
-            agg_rules = {
-                "Pass 1": "mean",
-                "Pass 2": "mean",
-                "Cost/Case": "mean",
-                "n": "sum",
-            }
-            agg_rules = {k: v for k, v in agg_rules.items() if k in df.columns}
-
-            # Add aggregation rules for extra columns
-            for extra_col in extra_display_cols:
-                if extra_col in df.columns and extra_col not in agg_rules:
-                    # Check if column is numeric
-                    if pd.api.types.is_numeric_dtype(df[extra_col]):
-                        agg_rules[extra_col] = "mean"
-                    else:
-                        # For text columns, use custom aggregation
-                        agg_rules[extra_col] = _agg_text_values
-
-            df = df.groupby(valid_groups, as_index=False).agg(agg_rules)
-
     # Handle extra columns
     extra_display_cols = []
     if extras:
@@ -236,6 +212,30 @@ def table(
             raise typer.Exit(1)
 
         extra_display_cols = existing_extras
+
+    # Handle Grouping
+    if group_by:
+        valid_groups = [g for g in group_by if g in df.columns]
+        if valid_groups:
+            agg_rules = {
+                "Pass 1": "mean",
+                "Pass 2": "mean",
+                "Cost/Case": "mean",
+                "n": "sum",
+            }
+            agg_rules = {k: v for k, v in agg_rules.items() if k in df.columns}
+
+            # Add aggregation rules for extra columns
+            for extra_col in extra_display_cols:
+                if extra_col in df.columns and extra_col not in agg_rules:
+                    # Check if column is numeric
+                    if pd.api.types.is_numeric_dtype(df[extra_col]):
+                        agg_rules[extra_col] = "mean"
+                    else:
+                        # For text columns, use custom aggregation
+                        agg_rules[extra_col] = _agg_text_values
+
+            df = df.groupby(valid_groups, as_index=False).agg(agg_rules)
 
     # Prepare Table
     table = Table(title="Benchmark Results")
