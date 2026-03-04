@@ -435,7 +435,7 @@ def plot(
             # Include diamond field in aggregation if specified
             if diamond and diamond in df.columns:
                 agg_rules[diamond] = "mean"
-            
+
             agg_rules = {k: v for k, v in agg_rules.items() if k in df.columns}
             df = df.groupby(valid_groups, as_index=False).agg(agg_rules)
 

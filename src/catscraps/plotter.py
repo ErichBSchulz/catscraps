@@ -65,7 +65,9 @@ def create_plot(
                     diamond_val = r.get(diamond_field)
                     # Convert to float if possible, otherwise use 0.0
                     try:
-                        diamond_list.append(float(diamond_val) if diamond_val is not None else 0.0)
+                        diamond_list.append(
+                            float(diamond_val) if diamond_val is not None else 0.0
+                        )
                     except (ValueError, TypeError):
                         diamond_list.append(0.0)
             else:
@@ -85,12 +87,26 @@ def create_plot(
         _create_plot_b_arrays(runs, model_names, all_p1, all_p2, all_costs, output_file)
     else:
         _create_plot_a_arrays(
-            runs, model_names, all_p1, all_p2, all_costs, all_diamonds, show_cost, output_file
+            runs,
+            model_names,
+            all_p1,
+            all_p2,
+            all_costs,
+            all_diamonds,
+            show_cost,
+            output_file,
         )
 
 
 def _create_plot_a_arrays(
-    run_names, model_names, all_p1, all_p2, all_costs, all_diamonds, show_cost, output_file
+    run_names,
+    model_names,
+    all_p1,
+    all_p2,
+    all_costs,
+    all_diamonds,
+    show_cost,
+    output_file,
 ):
     num_runs = len(run_names)
     fig, ax = plt.subplots(figsize=(12, max(5, len(model_names) * 0.7)))
@@ -110,7 +126,7 @@ def _create_plot_a_arrays(
             edgecolor="white",
             linewidth=0.5,
         )
-        
+
         # Add diamond markers if diamond data is provided
         if all_diamonds is not None and i < len(all_diamonds):
             diamond_values = all_diamonds[i]
@@ -122,19 +138,19 @@ def _create_plot_a_arrays(
                     bar_left = bar.get_x()
                     bar_right = bar.get_x() + bar.get_width()
                     diamond_x_clipped = max(bar_left, min(diamond_x, bar_right))
-                    
+
                     # Add diamond marker
                     ax.plot(
                         diamond_x_clipped,
                         bar.get_y() + bar.get_height() / 2,
-                        marker='D',
+                        marker="D",
                         markersize=8,
-                        color='white',
-                        markeredgecolor='black',
+                        color="white",
+                        markeredgecolor="black",
                         markeredgewidth=1,
-                        zorder=5  # Ensure diamonds are on top of bars
+                        zorder=5,  # Ensure diamonds are on top of bars
                     )
-        
+
         if show_cost:
             for j, bar in enumerate(bars):
                 if all_costs[i][j] > 0:
@@ -150,13 +166,13 @@ def _create_plot_a_arrays(
     ax.set_yticks(y_pos)
     ax.set_yticklabels(model_names)
     ax.set_xlabel("Pass Rate (%)")
-    
+
     # Update title to include diamond field info if present
     title = "Model Pass Rates: Range (Pass 1 to Pass 2)"
     if all_diamonds is not None:
         title += " with diamond markers"
     ax.set_title(title)
-    
+
     ax.set_xlim(0, 105)
     ax.grid(axis="x", linestyle="--", alpha=0.4)
     ax.legend(loc="upper right")
