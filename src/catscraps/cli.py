@@ -34,6 +34,7 @@ def _agg_text_values(series):
                 formatted.append(f"{val} ({count})")
         return ", ".join(formatted)
 
+
 # Configure logger
 logging.basicConfig(
     level=logging.WARNING,
@@ -193,7 +194,7 @@ def table(
                 "n": "sum",
             }
             agg_rules = {k: v for k, v in agg_rules.items() if k in df.columns}
-            
+
             # Add aggregation rules for extra columns
             for extra_col in extra_display_cols:
                 if extra_col in df.columns and extra_col not in agg_rules:
@@ -203,7 +204,7 @@ def table(
                     else:
                         # For text columns, use custom aggregation
                         agg_rules[extra_col] = _agg_text_values
-            
+
             df = df.groupby(valid_groups, as_index=False).agg(agg_rules)
 
     # Handle extra columns
